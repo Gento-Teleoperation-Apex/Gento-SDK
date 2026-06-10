@@ -2,6 +2,16 @@ name: Build SDK Debian Packages
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish generated packages to a GitHub Release"
+        required: false
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag to publish to when run manually, for example v4.4.0"
+        required: false
+        type: string
   push:
     tags:
       - "v*"
@@ -9,6 +19,9 @@ on:
       - "SDK_*/**"
       - "SDK_generate_tools/**"
       - ".github/workflows/build-sdk-debs.yml"
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -23,6 +36,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -46,7 +61,7 @@ jobs:
     name: Publish to GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.release_tag != '')
 
     steps:
       - name: Download all artifacts
@@ -55,8 +70,9 @@ jobs:
           path: packages
 
       - name: Upload to Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
           files: packages/**/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
