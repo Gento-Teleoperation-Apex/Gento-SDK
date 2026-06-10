@@ -71,10 +71,25 @@ jobs:
         with:
           path: packages
 
+      - name: Prepare release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+
+          find packages -type f -name '*.deb' | sort | while read -r package; do
+            artifact_dir="$(basename "$(dirname "${package}")")"
+            ubuntu_version="${artifact_dir#gento-sdk-ubuntu}"
+            ubuntu_version="${ubuntu_version%-*}"
+            package_name="$(basename "${package}" .deb)"
+            cp "${package}" "release-assets/${package_name}_ubuntu${ubuntu_version}.deb"
+          done
+
+          find release-assets -type f -name '*.deb' | sort
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-          files: packages/**/*.deb
+          files: release-assets/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
