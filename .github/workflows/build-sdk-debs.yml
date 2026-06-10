@@ -1,0 +1,43 @@
+name: Build SDK Debian Packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+    paths:
+      - "SDK_*/**"
+      - "SDK_generate_tools/**"
+      - ".github/workflows/build-sdk-debs.yml"
+
+jobs:
+  build:
+    name: Ubuntu ${{ matrix.ubuntu }} ${{ matrix.arch }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ["20.04", "22.04", "24.04"]
+        arch: ["amd64", "arm64"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build Debian package
+        run: |
+          ./SDK_generate_tools/build_all_debs.sh \
+            --ubuntu "${{ matrix.ubuntu }}" \
+            --arch "${{ matrix.arch }}"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gento-sdk-ubuntu${{ matrix.ubuntu }}-${{ matrix.arch }}
+          path: dist/ubuntu${{ matrix.ubuntu }}/${{ matrix.arch }}/*.deb
+          if-no-files-found: error
