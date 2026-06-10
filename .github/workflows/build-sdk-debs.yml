@@ -77,14 +77,41 @@ jobs:
           mkdir -p release-assets
 
           find packages -type f -name '*.deb' | sort | while read -r package; do
-            artifact_dir="$(basename "$(dirname "${package}")")"
+            relative_path="${package#packages/}"
+            artifact_dir="${relative_path%%/*}"
             ubuntu_version="${artifact_dir#gento-sdk-ubuntu}"
             ubuntu_version="${ubuntu_version%-*}"
             package_name="$(basename "${package}" .deb)"
             cp "${package}" "release-assets/${package_name}_ubuntu${ubuntu_version}.deb"
           done
 
+          release_package_count="$(find release-assets -type f -name '*.deb' | wc -l)"
+          if [[ "${release_package_count}" -ne 6 ]]; then
+            echo "Expected 6 release packages, found ${release_package_count}" >&2
+            find release-assets -type f -name '*.deb' | sort >&2
+            exit 1
+          fi
+
           find release-assets -type f -name '*.deb' | sort
+
+      - name: Remove old SDK release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if ! gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} does not exist yet; skipping asset cleanup."
+            exit 0
+          fi
+
+          gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name' |
+            while read -r asset; do
+              if [[ "${asset}" == gento-sdk_*.deb ]]; then
+                gh release delete-asset "${RELEASE_TAG}" "${asset}" --repo "${GITHUB_REPOSITORY}" --yes
+              fi
+            done
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
