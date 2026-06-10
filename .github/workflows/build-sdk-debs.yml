@@ -62,6 +62,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.release_tag != '')
+    permissions:
+      contents: write
 
     steps:
       - name: Download all artifacts
