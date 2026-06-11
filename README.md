@@ -1,31 +1,50 @@
 # Gento SDK
 
-## CI 自动打包和发布
+## Debian 包使用说明
 
-GitHub Actions workflow 位于 `.github/workflows/build-sdk-debs.yml`，会为 Ubuntu 20.04、22.04、24.04 生成 `amd64` 和 `arm64` Debian 包。
+本仓库会提供 `gento-sdk_*.deb` 安装包，安装后默认文件位置如下：
 
-### 自动发布
-
-推送 `v*` 格式的 tag 会自动构建并发布到对应的 GitHub Release：
-
-```bash
-git tag v4.4.0
-git push origin v4.4.0
+```text
+/usr/local/include/gentosdk
+/usr/local/lib/libGentoSDK.so
+/usr/local/bin/gento-sdk-version
 ```
 
-### 手动发布
+## 1. 获取匹配系统与架构的 deb
 
-1. 打开 GitHub 仓库页面。
-2. 进入 `Actions` -> `Build SDK Debian Packages`。
-3. 点击 `Run workflow`。
-4. 选择包含最新 workflow 的分支。
-5. 填写参数：
-   - `publish_release`: 勾选 `true`
-   - `release_tag`: 填写要发布的 tag，例如 `v4.4.0`
-6. 启动 workflow。
+从仓库 Release 或构建产物中下载与你环境匹配的包（例如 Ubuntu 22.04 + amd64）。
 
-手动运行时，如果没有勾选 `publish_release`，或者没有填写 `release_tag`，`publish` job 会被跳过，只生成 artifact，不上传到 GitHub Release。
+## 2. 安装 deb
 
-### 只生成包不发布
+```bash
+sudo apt install ./gento-sdk_4.4.0_amd64.deb
+```
 
-在 `Actions` 页面手动运行 workflow 时，不勾选 `publish_release` 即可。构建完成后，可以在 workflow run 的 artifact 中下载生成的 `.deb` 文件。
+如果本机缺少依赖，可先执行：
+
+```bash
+sudo apt update
+sudo apt -f install
+```
+
+## 3. 验证安装
+
+```bash
+gento-sdk-version
+```
+
+若命令正常输出版本号，表示安装成功。
+
+## 4. 在 CMake/colcon 中使用
+
+默认安装前缀是 `/usr/local`，常见用法：
+
+```bash
+GENTO_SDK_ROOT=/usr/local colcon build --packages-select <your_package>
+```
+
+## 5. 卸载
+
+```bash
+sudo apt remove gento-sdk
+```
