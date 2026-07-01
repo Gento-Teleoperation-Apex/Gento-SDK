@@ -39,7 +39,7 @@ Defaults:
   --package-version auto-detected from C_SDK/Common/FXCommon.h
 
 After package install:
-  sudo apt install ./gento-sdk_4.4.0_amd64.deb
+  sudo apt install ./gento-sdk_4.4.2_amd64.deb
   gento-sdk-version
   colcon build --packages-select marvin_ros_control
 
@@ -52,18 +52,47 @@ Legacy direct install:
 USAGE
 }
 
+version_sort_key_for_compile_script() {
+  local compile_script="$1"
+  local sdk_root
+  local version_header
+  local major="0"
+  local minor="0"
+  local patch="0"
+  local path_version="00000000"
+
+  sdk_root="$(dirname "${compile_script}")/C_SDK"
+  version_header="${sdk_root}/Common/FXCommon.h"
+
+  if [[ -f "${version_header}" ]]; then
+    major="$(awk '/#define[[:space:]]+FX_SDK_MAJOR_VERSION/ { gsub(/[^0-9]/, "", $3); print $3; exit }' "${version_header}")"
+    minor="$(awk '/#define[[:space:]]+FX_SDK_MINOR_VERSION/ { gsub(/[^0-9]/, "", $3); print $3; exit }' "${version_header}")"
+    patch="$(awk '/#define[[:space:]]+FX_SDK_PATCH_VERSION/ { gsub(/[^0-9]/, "", $3); print $3; exit }' "${version_header}")"
+  fi
+
+  if [[ "${sdk_root}" =~ /SDK/([0-9]{8})/C_SDK$ ]]; then
+    path_version="${BASH_REMATCH[1]}"
+  fi
+
+  printf "%06d.%06d.%06d.%s" "${major:-0}" "${minor:-0}" "${patch:-0}" "${path_version}"
+}
+
 find_default_compile_script() {
+  local matches
   local match
-  match="$(find "${PROJECT_ROOT}" -path '*/SDK/*/linux_auto_compile.sh' -type f | sort | head -n 1)"
-  if [[ -n "${match}" ]]; then
-    echo "${match}"
+
+  matches="$(
+    while IFS= read -r match; do
+      printf "%s\t%s\n" "$(version_sort_key_for_compile_script "${match}")" "${match}"
+    done < <(find "${PROJECT_ROOT}" -path '*/SDK/*/linux_auto_compile.sh' -type f | sort)
+  )"
+
+  if [[ -n "${matches}" ]]; then
+    printf "%s\n" "${matches}" | sort -r | head -n 1 | cut -f 2-
     return
   fi
 
-  match="$(find "${PROJECT_ROOT}" -name linux_auto_compile.sh -type f | sort | head -n 1)"
-  if [[ -n "${match}" ]]; then
-    echo "${match}"
-  fi
+  find "${PROJECT_ROOT}" -name linux_auto_compile.sh -type f | sort -r | head -n 1
 }
 
 while [[ $# -gt 0 ]]; do
@@ -225,6 +254,40 @@ run_linux_auto_compile() {
 
   echo "Running Linux auto compile: ${COMPILE_SCRIPT}"
   bash "${COMPILE_SCRIPT}"
+}
+
+validate_library_architecture() {
+  local architecture="$1"
+  local machine
+  local expected
+
+  if ! command -v readelf >/dev/null 2>&1; then
+    echo "Warning: readelf is not available; skipping libGentoSDK.so architecture validation." >&2
+    return
+  fi
+
+  machine="$(readelf -h "${SDK_LIB_SRC}" | awk -F: '/Machine:/ { sub(/^[[:space:]]+/, "", $2); print $2; exit }')"
+
+  case "${architecture}" in
+    amd64)
+      expected="Advanced Micro Devices X86-64"
+      ;;
+    arm64)
+      expected="AArch64"
+      ;;
+    *)
+      return
+      ;;
+  esac
+
+  if [[ "${machine}" != "${expected}" ]]; then
+    echo "libGentoSDK.so architecture mismatch." >&2
+    echo "  package architecture: ${architecture}" >&2
+    echo "  expected ELF machine: ${expected}" >&2
+    echo "  actual ELF machine:   ${machine}" >&2
+    echo "Rebuild inside the target architecture container, or omit --no-compile." >&2
+    exit 1
+  fi
 }
 
 install_headers() {
@@ -425,6 +488,7 @@ build_deb_package() {
   local package_file
 
   architecture="$(detect_architecture)"
+  validate_library_architecture "${architecture}"
   package_root="$(mktemp -d)"
   chmod 0755 "${package_root}"
   debian_dir="${package_root}/DEBIAN"

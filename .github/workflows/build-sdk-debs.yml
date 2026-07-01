@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
       release_tag:
-        description: "Release tag to publish to when run manually, for example v4.4.0"
+        description: "Release tag to publish to when run manually, for example v4.4.2"
         required: false
         type: string
   push:

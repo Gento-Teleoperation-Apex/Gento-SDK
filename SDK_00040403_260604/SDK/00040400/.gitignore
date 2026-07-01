@@ -1,8 +1,0 @@
-.vs/
-.idea/
-.vscode/
-*.pyc
-__pycache__/
-C_SDK/libGentoSDKPY.dll
-my_test/
-html/

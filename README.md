@@ -9,8 +9,8 @@ GitHub Actions workflow 位于 `.github/workflows/build-sdk-debs.yml`，会为 U
 推送 `v*` 格式的 tag 会自动构建并发布到对应的 GitHub Release：
 
 ```bash
-git tag v4.4.0
-git push origin v4.4.0
+git tag v4.4.2
+git push origin v4.4.2
 ```
 
 ### 手动发布
@@ -21,7 +21,7 @@ git push origin v4.4.0
 4. 选择包含最新 workflow 的分支。
 5. 填写参数：
    - `publish_release`: 勾选 `true`
-   - `release_tag`: 填写要发布的 tag，例如 `v4.4.0`
+   - `release_tag`: 填写要发布的 tag，例如 `v4.4.2`
 6. 启动 workflow。
 
 手动运行时，如果没有勾选 `publish_release`，或者没有填写 `release_tag`，`publish` job 会被跳过，只生成 artifact，不上传到 GitHub Release。
