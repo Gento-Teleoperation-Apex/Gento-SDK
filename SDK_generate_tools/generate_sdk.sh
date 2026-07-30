@@ -39,7 +39,7 @@ Defaults:
   --package-version auto-detected from C_SDK/Common/FXCommon.h
 
 After package install:
-  sudo apt install ./gento-sdk_4.4.2_amd64.deb
+  sudo apt install ./gento-sdk_4.5.0_amd64.deb
   gento-sdk-version
   colcon build --packages-select marvin_ros_control
 
@@ -175,6 +175,18 @@ DEST_BIN_DIR="${PREFIX}/bin"
 DEST_VERSION_TOOL="${DEST_BIN_DIR}/gento-sdk-version"
 
 SUDO=()
+
+resolve_sdk_library() {
+  local example_library="${SDK_ROOT}/../C_EXAMPLE_USE_DLL_SO/libGentoSDK.so"
+
+  if [[ -f "${SDK_LIB_SRC}" ]]; then
+    return
+  fi
+
+  if [[ -f "${example_library}" ]]; then
+    SDK_LIB_SRC="$(cd "$(dirname "${example_library}")" && pwd)/$(basename "${example_library}")"
+  fi
+}
 
 configure_sudo() {
   if [[ "$(id -u)" -eq 0 ]]; then
@@ -331,6 +343,11 @@ build_version_tool() {
     -I"${include_root}/Common" \
     -I"${include_root}/L1Robot" \
     -I"${include_root}/L0Control" \
+    -I"${include_root}/FXUtility" \
+    -I"${include_root}/FXUtility/FXMath" \
+    -I"${include_root}/FXUtility/FXCfg" \
+    -I"${include_root}/Interf" \
+    -I"${include_root}/FileClient" \
     -I"${include_root}/Kinematics" \
     -I"${include_root}/Kinematics/ArmKinematics" \
     -I"${include_root}/Kinematics/BaseMath" \
@@ -358,6 +375,7 @@ print_version() {
 
 install_sdk() {
   run_linux_auto_compile
+  resolve_sdk_library
   require_sources
   configure_sudo
 
@@ -466,6 +484,7 @@ POSTRM
 
 build_deb_package() {
   run_linux_auto_compile
+  resolve_sdk_library
   require_sources
 
   if ! command -v dpkg-deb >/dev/null 2>&1; then

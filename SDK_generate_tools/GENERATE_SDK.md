@@ -19,20 +19,20 @@
 当前目录结构下，脚本会自动找到：
 
 ```text
-SDK_CT040404_SDK040402_260617/SDK/00040402/linux_auto_compile.sh
-SDK_CT040404_SDK040402_260617/SDK/00040402/C_SDK
+SDK_CT040500_SDK040500_260709/SDK/00040500/linux_auto_compile.sh
+SDK_CT040500_SDK040500_260709/SDK/00040500/C_SDK
 ```
 
 生成的 deb 默认放在仓库根目录，例如：
 
 ```text
-gento-sdk_4.4.2_amd64.deb
+gento-sdk_4.5.0_amd64.deb
 ```
 
 安装：
 
 ```bash
-sudo apt install ./gento-sdk_4.4.2_amd64.deb
+sudo apt install ./gento-sdk_4.5.0_amd64.deb
 ```
 
 安装后验证：
@@ -65,7 +65,7 @@ sudo apt install build-essential dpkg-dev
 生成结果示例：
 
 ```text
-dist/gento-sdk_4.4.2_amd64.deb
+dist/gento-sdk_4.5.0_amd64.deb
 ```
 
 ### 跳过自动编译，只打包现有 so
@@ -81,13 +81,13 @@ dist/gento-sdk_4.4.2_amd64.deb
 `--sdk-root` 指向 `C_SDK` 目录：
 
 ```bash
-./SDK_generate_tools/generate_sdk.sh --sdk-root SDK_CT040404_SDK040402_260617/SDK/00040402/C_SDK
+./SDK_generate_tools/generate_sdk.sh --sdk-root SDK_CT040500_SDK040500_260709/SDK/00040500/C_SDK
 ```
 
 ### 指定编译脚本
 
 ```bash
-./SDK_generate_tools/generate_sdk.sh --compile-script SDK_CT040404_SDK040402_260617/SDK/00040402/linux_auto_compile.sh
+./SDK_generate_tools/generate_sdk.sh --compile-script SDK_CT040500_SDK040500_260709/SDK/00040500/linux_auto_compile.sh
 ```
 
 ### 指定安装前缀
@@ -115,7 +115,7 @@ GENTO_SDK_ROOT=/opt/gentosdk colcon build --packages-select marvin_ros_control
 ### 指定包名或版本号
 
 ```bash
-./SDK_generate_tools/generate_sdk.sh --package-name gento-sdk --package-version 00040402
+./SDK_generate_tools/generate_sdk.sh --package-name gento-sdk --package-version 00040500
 ```
 
 如果不指定 `--package-version`，当前脚本会优先从：
@@ -132,9 +132,9 @@ FX_SDK_MINOR_VERSION
 FX_SDK_PATCH_VERSION
 ```
 
-并生成类似 `4.4.2` 的 deb 版本号。
+并生成类似 `4.5.0` 的 deb 版本号。
 
-如果没有读到这些宏，才会从路径里的 SDK 目录名，例如 `SDK/00040402/C_SDK`，取 `00040402` 作为版本号。
+如果没有读到这些宏，才会从路径里的 SDK 目录名，例如 `SDK/00040500/C_SDK`，取 `00040500` 作为版本号。
 
 ## 直接安装模式
 
@@ -164,15 +164,15 @@ FX_SDK_PATCH_VERSION
 
 ```bash
 ./SDK_generate_tools/generate_sdk.sh
-sudo apt install ./gento-sdk_4.4.2_amd64.deb
+sudo apt install ./gento-sdk_4.5.0_amd64.deb
 gento-sdk-version
 ```
 
-如果需要用 `00040402` 作为 deb 版本号：
+如果需要用 `00040500` 作为 deb 版本号：
 
 ```bash
-./SDK_generate_tools/generate_sdk.sh --package-version 00040402
-sudo apt install ./gento-sdk_00040402_amd64.deb
+./SDK_generate_tools/generate_sdk.sh --package-version 00040500
+sudo apt install ./gento-sdk_00040500_amd64.deb
 ```
 
 ## 多系统多架构构建
@@ -217,7 +217,7 @@ dist/
 触发方式：
 
 - 手动运行 `workflow_dispatch`
-- 推送 `v*` tag，例如 `v4.4.2`
+- 推送 `v*` tag，例如 `v4.5.0`
 
 Actions 会构建 6 个目标：
 

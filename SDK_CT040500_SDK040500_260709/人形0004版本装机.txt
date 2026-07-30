@@ -1,0 +1,21 @@
+重要说明：
+1）0004版本的系统是基于3主站配置的主板，eth0/eth1/eth2对应3个主站，eth3作为以太网通讯口
+2）请在安装前将主板下/opt/etherlab/etc/ethercat.conf文件配置成3主站的形式
+
+初次安装：
+1）用XShell连上控制板，如果该控制板上已经存在控制系统，则需要先停止控制程序运行，操作如下：
+     sh /home/FUSION/Shell/stop.sh
+2）将安装包install_package_XXX.INSTALL用XShell复制到控制板/mnt/目录下
+3）运行安装包脚本，操作如下：
+     cd /mnt
+     tar xf install_package_XXX.INSTALL
+     cd install_package
+     sh FXAutoRun.sh
+4）设定配置文件，操作如下：
+     cd /home/FUSION/Config/cfg
+     cp /home/FUSION/Config/cfg_default/robot_XXX.ini /home/FUSION/Config/cfg/robot.ini
+     上述的robot_XXX.ini为机型对应的配置模板文件，目前支持MarvinProM3/MarvinProM6/GentoSkye/GentoLuna
+     注：默认安装机型是MarvinProM6。如果目标机型是MarvinProM6，则不需要进行步骤4)。
+5）重新启动控制板
+     注：重启后控制板eth3的IP会变为6.6.7.190
+
