@@ -39,7 +39,7 @@ Defaults:
   --package-version auto-detected from C_SDK/Common/FXCommon.h
 
 After package install:
-  sudo apt install ./gento-sdk_4.5.0_amd64.deb
+  sudo apt install ./gento-sdk_4.6.0_amd64.deb
   gento-sdk-version
   colcon build --packages-select marvin_ros_control
 
@@ -278,7 +278,7 @@ validate_library_architecture() {
     return
   fi
 
-  machine="$(readelf -h "${SDK_LIB_SRC}" | awk -F: '/Machine:/ { sub(/^[[:space:]]+/, "", $2); print $2; exit }')"
+  machine="$(LC_ALL=C readelf -h "${SDK_LIB_SRC}" | awk -F: '/Machine:/ { sub(/^[[:space:]]+/, "", $2); print $2; exit }')"
 
   case "${architecture}" in
     amd64)
@@ -354,6 +354,7 @@ build_version_tool() {
     -I"${include_root}/Kinematics/DynaIdent" \
     -I"${include_root}/Kinematics/KineCommon" \
     -I"${include_root}/Kinematics/MotionPlanner" \
+    -I"${include_root}/Kinematics/LunaBodyKinematics" \
     -I"${include_root}/Kinematics/SkyeBodyKinematics" \
     -L"${lib_dir}" \
     -Wl,-rpath,"${DEST_LIB_DIR}" \
