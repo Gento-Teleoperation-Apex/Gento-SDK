@@ -350,6 +350,7 @@ build_version_tool() {
     -I"${include_root}/FileClient" \
     -I"${include_root}/Kinematics" \
     -I"${include_root}/Kinematics/ArmKinematics" \
+    -I"${include_root}/Kinematics/LunaBodyKinematics" \
     -I"${include_root}/Kinematics/BaseMath" \
     -I"${include_root}/Kinematics/DynaIdent" \
     -I"${include_root}/Kinematics/KineCommon" \
