@@ -278,7 +278,7 @@ validate_library_architecture() {
     return
   fi
 
-  machine="$(readelf -h "${SDK_LIB_SRC}" | awk -F: '/Machine:/ { sub(/^[[:space:]]+/, "", $2); print $2; exit }')"
+  machine="$(LC_ALL=C readelf -h "${SDK_LIB_SRC}" | LC_ALL=C awk -F: '/Machine:/ { sub(/^[[:space:]]+/, "", $2); print $2; exit }')"
 
   case "${architecture}" in
     amd64)
