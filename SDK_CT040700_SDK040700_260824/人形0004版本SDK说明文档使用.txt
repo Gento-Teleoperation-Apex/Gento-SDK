@@ -1,1 +1,0 @@
-进入FX_SDK_html目录中，双击index.html，用浏览器阅览。

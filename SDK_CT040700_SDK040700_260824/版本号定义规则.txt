@@ -1,5 +1,0 @@
-SDK和控制器版本说明：
-1）版本号32bits
-2）MAJOR.MINOR.PATH，按照16bit.8bit.8bit分布
-3）控制器会检查要连入的SDK版本号的MAJOR和MINOR部分，如果和控制器版本的MAJOR和MINOR一致，就支持连入。
-     也就是说，MAJOR.MINOR相同的SDK和控制器版本才兼容，否则为不兼容
