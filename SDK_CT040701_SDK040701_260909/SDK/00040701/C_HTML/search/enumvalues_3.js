@@ -18,7 +18,9 @@ var searchData=
   ['user_5ffbk_5farm1_5finternal_5fpd_5fk_15',['USER_FBK_ARM1_INTERNAL_PD_K',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba5133d2a2e6e768923527c4da7664a552',1,'FXCommon.h']]],
   ['user_5ffbk_5farm1_5finternal_5ftool_5fd_16',['USER_FBK_ARM1_INTERNAL_TOOL_D',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba07d1778e0f2dcadfa023b5f07a529168',1,'FXCommon.h']]],
   ['user_5ffbk_5farm1_5finternal_5ftool_5fk_17',['USER_FBK_ARM1_INTERNAL_TOOL_K',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba9b1a330a9ce2a907b0f866e24abdd4bc',1,'FXCommon.h']]],
-  ['user_5ffbk_5fbody_5finternal_5fffdtor_18',['USER_FBK_BODY_INTERNAL_FFDTOR',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba70a5db307c53b99b9f429ce938d5b4dd',1,'FXCommon.h']]],
-  ['user_5ffbk_5fbody_5finternal_5fpd_5fd_19',['USER_FBK_BODY_INTERNAL_PD_D',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba7f28ba8b7e1acb5771232d7760eb9228',1,'FXCommon.h']]],
-  ['user_5ffbk_5fbody_5finternal_5fpd_5fk_20',['USER_FBK_BODY_INTERNAL_PD_K',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825bad37e8efa17937e761c65357ca3d98fcc',1,'FXCommon.h']]]
+  ['user_5ffbk_5fbody_5finternal_5fantiip_5ftor_5fmax_18',['USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MAX',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba285d8558f63d94a6e6ac6222ec3fce77',1,'FXCommon.h']]],
+  ['user_5ffbk_5fbody_5finternal_5fantiip_5ftor_5fmin_19',['USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MIN',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba35eecd7d6c19dabe6cb1b4737de278bb',1,'FXCommon.h']]],
+  ['user_5ffbk_5fbody_5finternal_5fffdtor_20',['USER_FBK_BODY_INTERNAL_FFDTOR',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba70a5db307c53b99b9f429ce938d5b4dd',1,'FXCommon.h']]],
+  ['user_5ffbk_5fbody_5finternal_5fpd_5fd_21',['USER_FBK_BODY_INTERNAL_PD_D',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba7f28ba8b7e1acb5771232d7760eb9228',1,'FXCommon.h']]],
+  ['user_5ffbk_5fbody_5finternal_5fpd_5fk_22',['USER_FBK_BODY_INTERNAL_PD_K',['../_f_x_common_8h.html#ad5d46d095a861058319841479b42825bad37e8efa17937e761c65357ca3d98fcc',1,'FXCommon.h']]]
 ];

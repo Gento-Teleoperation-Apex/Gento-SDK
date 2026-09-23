@@ -6190,7 +6190,6 @@ int FX_L1_Config_GetPDCmdCycleTime(int *cycle_time)
 
 int FX_L1_Config_SetInterferenceEnable(char *CordDef, char *CalLinkDef, char *InputDef, char *ConvexDef, char *ICDef)
 {
-    FX_INTERFER_USE = true;
     if(!handle)
     {
         handle = FX_Interf_Create();
@@ -6200,6 +6199,7 @@ int FX_L1_Config_SetInterferenceEnable(char *CordDef, char *CalLinkDef, char *In
             return FUNC_RET_OPERATION_FAILED;
         }        
     }
+    FX_INTERFER_USE = true;
     return FUNC_RET_SUCCESS;
 }
 

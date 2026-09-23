@@ -34,6 +34,8 @@ if sys.platform == 'win32':
         '--specpath', base_dir,
         '--paths', sdk_dir,
         '--hidden-import', 'ctypes',
+        # Data Visualization dialog embeds a matplotlib figure in Tk.
+        '--hidden-import', 'matplotlib.backends.backend_tkagg',
     ]
     for dll in sdk_dll_files:
         pack_args.extend(['--add-binary', dll + ';.'])
@@ -52,6 +54,8 @@ else:
         '--specpath', base_dir,
         '--paths', sdk_dir,
         '--hidden-import', 'ctypes',
+        # Data Visualization dialog embeds a matplotlib figure in Tk.
+        '--hidden-import', 'matplotlib.backends.backend_tkagg',
         '--hidden-import', 'PIL._tkinter_finder',
         '--hidden-import', 'PIL.Image',
         '--hidden-import', 'PIL.ImageTk',

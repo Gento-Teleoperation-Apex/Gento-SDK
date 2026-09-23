@@ -1,5 +1,7 @@
 var NAVTREEINDEX1 =
 {
+"group__fx__function__return__codes.html#gga848ecba884c313c20c653b7effc7b409a31195408dd4ec04a411f5e7a879798f9":[0,6,0,42],
+"group__fx__function__return__codes.html#gga848ecba884c313c20c653b7effc7b409a31cc97b9d8fd7c89799a0dc7024186de":[0,6,0,7],
 "group__fx__function__return__codes.html#gga848ecba884c313c20c653b7effc7b409a3a692c0b43b0d838da2b7463f8b3530f":[0,6,0,10],
 "group__fx__function__return__codes.html#gga848ecba884c313c20c653b7effc7b409a3d243f4ad8f55f529cf5354b9673bc2a":[0,6,0,22],
 "group__fx__function__return__codes.html#gga848ecba884c313c20c653b7effc7b409a447338ffd534fc2234fd7a9d44a482be":[0,6,0,20],

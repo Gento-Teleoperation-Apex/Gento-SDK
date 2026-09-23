@@ -166,7 +166,9 @@ var _f_x_common_8h =
       [ "USER_FBK_ARM1_INTERNAL_PD_D", "_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba491c699df464c2e113ffda1e5eedd564", null ],
       [ "USER_FBK_BODY_INTERNAL_FFDTOR", "_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba70a5db307c53b99b9f429ce938d5b4dd", null ],
       [ "USER_FBK_BODY_INTERNAL_PD_K", "_f_x_common_8h.html#ad5d46d095a861058319841479b42825bad37e8efa17937e761c65357ca3d98fcc", null ],
-      [ "USER_FBK_BODY_INTERNAL_PD_D", "_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba7f28ba8b7e1acb5771232d7760eb9228", null ]
+      [ "USER_FBK_BODY_INTERNAL_PD_D", "_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba7f28ba8b7e1acb5771232d7760eb9228", null ],
+      [ "USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MIN", "_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba35eecd7d6c19dabe6cb1b4737de278bb", null ],
+      [ "USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MAX", "_f_x_common_8h.html#ad5d46d095a861058319841479b42825ba285d8558f63d94a6e6ac6222ec3fce77", null ]
     ] ],
     [ "HeadState", "group__fx__state__machines.html#ga85022a709f9df7ef3e5be683c3bab877", null ],
     [ "LiftState", "group__fx__state__machines.html#ga9fcdb47c5064884d53c127f9615303a8", null ],

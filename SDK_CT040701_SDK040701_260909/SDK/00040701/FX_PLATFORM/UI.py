@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk, scrolledtext, filedialog, simpledialog
+import collections
 import threading
 import time
 import queue
@@ -7,6 +8,7 @@ import os
 import math
 import sys
 import ast
+import traceback
 import difflib
 import re
 from pathlib import Path
@@ -23,6 +25,175 @@ for p in [str(base_dir), str(root_dir)]:
         sys.path.insert(0, p)
 
 from PYTHON_SDK.GentoRobot import GentoRobot, RobotDataManager, HandDataManager, ArmsSynchronousPlanningParams, error_dict, FXObjType, FXLogMask, FXObjMask, FXRefOriType, robot_type_map, state_map, FXHandType,FXHandAction,FXHandState, FX_InvKineSolverParams, ToolDynTaskStatus, LoadDynamicPara, FXUserFbkType
+
+_matplotlib_error = None
+try:
+    import matplotlib
+    matplotlib.use("TkAgg")
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+except Exception as _e:  # pragma: no cover - depends on the local install
+    _matplotlib_error = _e
+    Figure = None
+    FigureCanvasTkAgg = None
+    NavigationToolbar2Tk = None
+
+
+# ==================== Real-time data flattening ====================
+_VIZ_SCALARS = [
+    # (key, path into the rt dict)
+    ("frame_serial", ("frame_serial",)),
+    ("head/cmd_tag", ("head", "cdm_tag")),
+    ("body/cmd_tag", ("body", "cmd_tag")),
+    ("lift/cmd_tag", ("lift", "cmd_tag")),
+]
+
+
+def flatten_rt(rt):
+    """Flatten a get_rt_dict() dictionary into {signal_key: float}.
+
+    Only numeric leaves are emitted; anything missing or non-numeric is skipped
+    so a controller running older firmware simply shows fewer signals instead of
+    raising from inside the sampling thread.
+    """
+    if not isinstance(rt, dict) or "error" in rt:
+        return {}
+
+    out = {}
+
+    def put(key, value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return
+        out[key] = float(value)
+
+    def put_list(prefix, values):
+        if not isinstance(values, (list, tuple)):
+            return
+        for i, v in enumerate(values):
+            put(f"{prefix}/{i}", v)
+
+    for key, path in _VIZ_SCALARS:
+        node = rt
+        for part in path:
+            node = node.get(part) if isinstance(node, dict) else None
+        put(key, node)
+
+    put_list("pdo_state", rt.get("pdo_state"))
+    put_list("robot_imu", rt.get("robot_imu"))
+    put_list("agv_imu", rt.get("agv_imu"))
+
+    # arms[0]/arms[1] -> arms/0/<group>/<field>/<index>
+    for arm_idx, arm in enumerate(rt.get("arms") or []):
+        if not isinstance(arm, dict):
+            continue
+        base = f"arms/{arm_idx}"
+        put(f"{base}/state/cur", (arm.get("state") or {}).get("cur"))
+        put(f"{base}/state/err", (arm.get("state") or {}).get("err"))
+        for group in ("cmd", "fb"):
+            fields = arm.get(group)
+            if not isinstance(fields, dict):
+                continue
+            for field, values in fields.items():
+                put_list(f"{base}/{group}/{field}", values)
+
+    for name in ("head", "body", "lift"):
+        node = rt.get(name)
+        if not isinstance(node, dict):
+            continue
+        put(f"{name}/state/cur", (node.get("state") or {}).get("cur"))
+        put(f"{name}/state/err", (node.get("state") or {}).get("err"))
+        # cmd_pos / cmd_tag are scalars-or-lists, fb_* are lists; put/put_list
+        # each ignore the shape they cannot handle.
+        for field, values in node.items():
+            if field in ("state", "cmd_tag", "cdm_tag"):
+                continue
+            put_list(f"{name}/{field}", values)
+
+    fbk = rt.get("system_user_fbk")
+    if isinstance(fbk, dict):
+        put_list("system_user_fbk/types", fbk.get("types"))
+        # Channels are a list of lists; unfold it so every channel element gets
+        # its own stable scalar key.
+        for chn_idx, chn in enumerate(fbk.get("chn") or []):
+            if isinstance(chn, (list, tuple)):
+                for i, v in enumerate(chn):
+                    put(f"system_user_fbk/chn{chn_idx}/{i}", v)
+            else:
+                put(f"system_user_fbk/chn{chn_idx}", chn)
+
+    return out
+
+
+# Human-readable labels for a flat signal key, used by the tree view.
+_VIZ_FIELD_LABELS = {
+    "fb_pos": "joint pos",
+    "fb_vel": "joint vel",
+    "cmd_pos": "cmd pos",
+    "fb_sensor": "sensor torque",
+    "fb_ext_torque": "external torque",
+    "fb_gravity_torque": "gravity torque",
+    "base_force": "base force",
+    "flange_force": "flange force",
+    "joint_pos": "cmd joint pos",
+    "joint_trq": "cmd joint torque",
+    "force_dir": "cmd force dir",
+    "torque_dir": "cmd torque dir",
+    "ref_orientation": "cmd ref ori",
+    "pdo_state": "pdo state",
+    "robot_imu": "robot IMU",
+    "agv_imu": "agv IMU",
+    "types": "fbk types",
+}
+
+
+def viz_signal_label(key):
+    """Turn 'arms/0/fb/fb_pos/2' into 'arm0 fb joint pos 2' for display.
+
+    Output must stay unique per key: the dialog uses it as the matplotlib legend
+    label, and duplicate labels would collapse into one legend entry.
+    """
+    parts = key.split("/")
+    if len(parts) >= 3 and parts[0] == "arms":
+        group = parts[2]
+        field = _VIZ_FIELD_LABELS.get(parts[3], parts[3])
+        head = f"arm{parts[1]} {group} {field}"
+        if len(parts) >= 5:
+            head += f" {parts[4]}"
+        return head
+    if len(parts) >= 2 and parts[0] in ("head", "body", "lift"):
+        field = _VIZ_FIELD_LABELS.get(parts[1], parts[1])
+        head = f"{parts[0]} {field}"
+        if len(parts) >= 3:
+            head += f" {parts[2]}"
+        return head
+    if len(parts) >= 2 and parts[0] == "system_user_fbk":
+        name = _VIZ_FIELD_LABELS.get(parts[1], parts[1])
+        return " ".join(["fbk", name] + parts[2:])
+    return " ".join([_VIZ_FIELD_LABELS.get(p, p) for p in parts])
+
+
+# Default selection when the dialog opens: the seven Arm0 joint angles.
+_VIZ_DEFAULT_KEYS = [f"arms/0/fb/fb_pos/{i}" for i in range(7)]
+
+# Tick marks in the signal tree. These two are deliberately in GB2312: a Treeview
+# label is drawn with the Tk system font, and a glyph outside the console codepage
+# ("☑"/"☐") renders as a box or not at all on a Chinese Windows install.
+_VIZ_TICK = "● "      # ● selected
+_VIZ_UNTICK = "○ "    # ○ not selected
+
+# Redraw period (20 Hz). The plot does not need to match the sampling rate: a
+# 1000 Hz buffer drawn at 1000 fps just burns CPU.
+_VIZ_DRAW_INTERVAL_MS = 50
+
+# Sampling rate bounds for the rate slider. The SDK timer runs at 1 kHz, so
+# 1000 Hz is the fastest rate that still yields independent samples.
+_VIZ_RATE_MIN = 1
+_VIZ_RATE_MAX = 1000
+_VIZ_RATE_DEFAULT = 1000
+
+# Above this many curves the legend covers more of the plot than it explains.
+_VIZ_LEGEND_MAX = 20
+
 
 class App:
     def __init__(self, root):
@@ -44,6 +215,21 @@ class App:
         self._imu_refresh_id = None
         self._imu_labels = {"robot": [], "agv": []}
 
+
+        # Data Visualization window state (lazily created in
+        # data_visualization_dialog). Declared up-front so _viz_close can run
+        # even if the dialog was never opened.
+        self._viz_win = None
+        self._viz_thread = None
+        self._viz_draw_id = None
+        self._viz_alive = False
+        self._viz_running = False
+        self._viz_buf = {}
+        self._viz_lines = {}
+        self._viz_checked = {}
+        self._viz_selected = []
+        self._viz_color_slots = []
+        self._viz_view_end = 0.0
 
         self.servo_versions = {}
         self.servo_cfg_versions = {}
@@ -1218,7 +1404,7 @@ class App:
         self.user_fbk_type_var = tk.StringVar()
         self.user_fbk_type_combo = ttk.Combobox(
             set_row, textvariable=self.user_fbk_type_var, state="readonly",
-            width=42, font=("Arial", 9))
+            width=60, font=("Arial", 9))
         self.user_fbk_type_combo['values'] = fbk_values
         # Default to Arm0 FFD torque.
         default_label = self._user_fbk_type_map.get(
@@ -1529,9 +1715,7 @@ class App:
                             self.hand_mgr_btn.config(text="Start Hand Data Manager", bg="#A2CD5A")
                             self.hand_mgr_status.config(text="stopped", fg="gray")
                     self.data_manager = RobotDataManager(robot)
-                    if not getattr(self, '_update_data_loop_running', False):
-                        self._update_data_loop_running = True
-                        self.update_data()
+                    self._start_update_data_loop()
                     # Refresh the error/warning dropdowns so they no longer
                     # show the "(not connected)" placeholder after a reconnect.
                     self._reset_log_combos()
@@ -1585,6 +1769,7 @@ class App:
 
             self._stop_link_monitor()
             self.connected = False
+            self._stop_update_data_loop()
             self._log_running = False
             self._log_history = []
             for lbl in self.log_labels:
@@ -1850,15 +2035,53 @@ class App:
         if fb_torque_arm1 is not None and len(fb_torque_arm1) > 0:
             self.torque_b_entry.set(','.join(str(v) for v in fb_torque_arm1))
 
+    def _start_update_data_loop(self):
+        """(Re)start the UI refresh loop, cancelling any pending tick first.
+
+        Safe to call repeatedly (e.g. on every reconnect): the previous scheduled
+        tick is cancelled so loops never stack up.
+        """
+        if getattr(self, '_update_data_id', None) is not None:
+            try:
+                self.root.after_cancel(self._update_data_id)
+            except Exception:
+                pass
+            self._update_data_id = None
+        self._update_data_loop_running = True
+        self.update_data()
+
+    def _stop_update_data_loop(self):
+        """Cancel the pending refresh tick and clear the running flag."""
+        self._update_data_loop_running = False
+        if getattr(self, '_update_data_id', None) is not None:
+            try:
+                self.root.after_cancel(self._update_data_id)
+            except Exception:
+                pass
+            self._update_data_id = None
+
     def update_data(self):
+        # The next tick MUST always be rescheduled, even if update_ui() raises.
+        # Otherwise a single transient exception (e.g. a None kinematics result
+        # or an unexpected state value) kills the loop permanently: the UI stops
+        # refreshing while the rest of the app stays responsive.
         if not self.connected:
             self._update_data_loop_running = False
+            self._update_data_id = None
             return
-        if self.data_manager:
-            self.rt = self.data_manager.latest_rt
-            self.sg = self.data_manager.latest_sg
-            self.update_ui()
-        self.root.after(200, self.update_data)
+        try:
+            if self.data_manager:
+                self.rt = self.data_manager.latest_rt
+                self.sg = self.data_manager.latest_sg
+                self.update_ui()
+        except Exception as e:
+            print(f"[update_data] exception: {e!r}")
+        finally:
+            if self.connected:
+                self._update_data_id = self.root.after(200, self.update_data)
+            else:
+                self._update_data_loop_running = False
+                self._update_data_id = None
 
     def update_ui(self):
         if self.rt is None or self.sg is None:
@@ -1910,7 +2133,7 @@ class App:
 
         # ==================== ARM0 ====================
         cur_state = robot.current_state(FXObjType.OBJ_ARM0)
-        self.left_state_main.config(text=state_map[cur_state])
+        self.left_state_main.config(text=state_map.get(cur_state, str(cur_state)))
 
         if self.sg['arms'][0]['get']['tip_di'] == 1:
             self.left_state_1.config(text=f"Dragging")
@@ -1951,7 +2174,7 @@ class App:
 
         # ==================== ARM1 ====================
         cur_state = robot.current_state(FXObjType.OBJ_ARM1)
-        self.right_state_main.config(text=state_map[cur_state])
+        self.right_state_main.config(text=state_map.get(cur_state, str(cur_state)))
 
         if self.sg['arms'][1]['get']['tip_di'] == 1:
             self.right_state_1.config(text=f"Dragging")
@@ -2076,9 +2299,18 @@ class App:
         self.update_ui()
 
     def update_time(self):
-        current_time = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.time_label.config(text=current_time)
-        self.root.after(1000, self.update_time)
+        # Reschedule in a finally block so the clock keeps ticking even if a
+        # label update raises (e.g. during teardown).
+        try:
+            current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+            self.time_label.config(text=current_time)
+        except Exception as e:
+            print(f"[update_time] exception: {e!r}")
+        finally:
+            try:
+                self.root.after(1000, self.update_time)
+            except Exception:
+                pass
 
     def update_log(self):
         """Start a background thread that continuously reads system messages.
@@ -2147,6 +2379,13 @@ class App:
     def on_close(self):
         if messagebox.askokcancel("Exit", "Are you sure you want to exit the application?"):
             self._stop_link_monitor()
+            self._stop_update_data_loop()
+            self._log_running = False
+            if getattr(self, 'data_manager', None):
+                self.data_manager.stop()
+                self.data_manager = None
+            if getattr(self, 'hand_data_manager', None) and self.hand_data_manager.is_running:
+                self.hand_data_manager.stop()
             self.root.destroy()
             robot.unlink()
 
@@ -3403,6 +3642,8 @@ class App:
 
     def show_more_features(self):
         menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(label="Data Visualization", command=self.data_visualization_dialog)
+        menu.add_separator()
         menu.add_command(label="CAN/485", command=self.eef_dialog)
         menu.add_separator()
         menu.add_command(label="Hand Data Communication", command=self.hand_data_dialog)
@@ -3435,6 +3676,458 @@ class App:
             )
         finally:
             menu.grab_release()
+
+    # ==================== Data Visualization ====================
+    def data_visualization_dialog(self):
+        """Realtime signal viewer: plots a user-picked subset of RT data.
+
+        Data comes from self.data_manager.latest_rt (the same snapshot the main
+        window already polls), sampled by a thread that lives only as long as
+        this window. Nothing is written back to PYTHON_SDK.
+        """
+        if _matplotlib_error is not None:
+            messagebox.showerror(
+                'Error',
+                "matplotlib is not available, so Data Visualization cannot start.\n"
+                f"Import error: {_matplotlib_error}")
+            return
+        if not self.connected or not self.data_manager:
+            messagebox.showerror('Error', "Please connect robot first!")
+            return
+
+        # One window at a time: if it is already up, just raise it instead of
+        # starting a second sampling thread.
+        if self._viz_win is not None and self._viz_win.winfo_exists():
+            self._viz_win.lift()
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Data Visualization")
+        win.geometry("1250x780")
+        win.configure(bg="white")
+        win.transient(self.root)
+        win.resizable(True, True)
+        self._viz_win = win
+
+        # ---- per-dialog state ----
+        self._viz_alive = True
+        self._viz_running = False          # sampling thread enabled
+        self._viz_draw_id = None           # pending after() id for redraw
+        self._viz_thread = None
+        self._viz_rate = float(_VIZ_RATE_DEFAULT)   # Hz
+        self._viz_window = 10.0            # seconds kept in the buffer
+        self._viz_maxlen = int(self._viz_rate * self._viz_window)
+        self._viz_buf = {}                 # key -> deque[(t, value)]
+        self._viz_selected = list(_VIZ_DEFAULT_KEYS)
+        self._viz_color_slots = list(_VIZ_DEFAULT_KEYS)  # selection order -> colour
+        self._viz_checked = {}             # tree item id -> signal key
+        self._viz_overrun = 0
+        self._viz_samples = 0
+        self._viz_t0 = 0.0
+        self._viz_view_end = 0.0           # right edge of the view, frozen on pause
+        self._viz_lines = {}               # key -> Line2D
+
+        # ---- selection tree (left) + plot (right) ----
+        body = tk.Frame(win, bg="white")
+        body.pack(fill="both", expand=True, padx=10, pady=(10, 5))
+
+        left = tk.Frame(body, bg="white")
+        left.pack(side="left", fill="y")
+        tree_head = tk.Frame(left, bg="white")
+        tree_head.pack(fill="x")
+        tk.Label(tree_head, text="Signals (click to tick):", bg="white").pack(side="left")
+        tk.Button(tree_head, text="Clear all", command=self._viz_clear_ticks
+                  ).pack(side="right", padx=(5, 0))
+        tree_wrap = tk.Frame(left, bg="white")
+        tree_wrap.pack(fill="both", expand=True)
+        self._viz_tree = ttk.Treeview(tree_wrap, show="tree", height=28,
+                                      selectmode="browse")
+        tree_sb = ttk.Scrollbar(tree_wrap, orient="vertical",
+                                command=self._viz_tree.yview)
+        self._viz_tree.configure(yscrollcommand=tree_sb.set)
+        self._viz_tree.pack(side="left", fill="both", expand=True)
+        tree_sb.pack(side="left", fill="y")
+        self._viz_tree.bind("<Button-1>", self._viz_tree_click)
+        self._build_viz_tree()
+
+        right = tk.Frame(body, bg="white")
+        right.pack(side="left", fill="both", expand=True, padx=(10, 0))
+        figure = Figure(figsize=(7.5, 5.2), dpi=100)
+        self._viz_ax = figure.add_subplot(111)
+        self._viz_ax.set_xlabel("time (s)")
+        self._viz_ax.set_ylabel("value")
+        self._viz_ax.grid(True, alpha=0.3)
+        self._viz_figure = figure
+        self._viz_canvas = FigureCanvasTkAgg(figure, master=right)
+        self._viz_canvas.get_tk_widget().pack(fill="both", expand=True)
+        toolbar = NavigationToolbar2Tk(self._viz_canvas, right)
+        toolbar.update()
+        toolbar.pack(fill="x")
+
+        # ---- controls ----
+        ctl = tk.Frame(win, bg="white")
+        ctl.pack(fill="x", padx=10, pady=(0, 10))
+
+        self._viz_start_btn = tk.Button(ctl, text="Start", bg="#A2CD5A", width=8,
+                                        command=self._viz_start)
+        self._viz_start_btn.pack(side="left", padx=(0, 5))
+        self._viz_pause_btn = tk.Button(ctl, text="Pause", bg="#4AA7EA", fg="white",
+                                        width=8, state="disabled",
+                                        command=self._viz_pause)
+        self._viz_pause_btn.pack(side="left", padx=(0, 5))
+        tk.Button(ctl, text="Clear", width=8,
+                  command=self._viz_clear).pack(side="left", padx=(0, 10))
+
+        tk.Label(ctl, text="Rate:", bg="white").pack(side="left")
+        self._viz_rate_var = tk.IntVar(value=_VIZ_RATE_DEFAULT)
+        rate_scale = tk.Scale(ctl, from_=_VIZ_RATE_MIN, to=_VIZ_RATE_MAX,
+                              orient="horizontal", variable=self._viz_rate_var,
+                              length=190, showvalue=False, bg="white",
+                              highlightthickness=0, command=self._viz_rate_changed)
+        rate_scale.pack(side="left", padx=(2, 2))
+        self._viz_rate_label = tk.Label(ctl, text=f"{_VIZ_RATE_DEFAULT} Hz",
+                                        bg="white", width=8, anchor="w")
+        self._viz_rate_label.pack(side="left", padx=(0, 10))
+
+        tk.Label(ctl, text="Window:", bg="white").pack(side="left")
+        self._viz_window_var = tk.StringVar(value="10 s")
+        ttk.Combobox(ctl, textvariable=self._viz_window_var, state="readonly", width=6,
+                     values=["5 s", "10 s", "30 s", "60 s"]).pack(side="left", padx=(2, 10))
+
+        self._viz_auto_var = tk.IntVar(value=1)
+        tk.Checkbutton(ctl, text="Auto Y", variable=self._viz_auto_var,
+                       bg="white").pack(side="left", padx=(0, 10))
+
+        self._viz_status = tk.Label(ctl, text="idle", bg="white", fg="gray")
+        self._viz_status.pack(side="left")
+
+        win.protocol("WM_DELETE_WINDOW", lambda: self._viz_close(win))
+        self._viz_redraw()          # draw the empty axes + default legend
+        self._viz_start()           # sampling on by default
+
+    # ---- selection tree -------------------------------------------------
+    def _build_viz_tree(self):
+        """Populate the tree from the signal keys currently present in RT data."""
+        tree = self._viz_tree
+        for item in tree.get_children():
+            tree.delete(item)
+        self._viz_checked = {}
+
+        rt = self.data_manager.latest_rt if self.data_manager else None
+        keys = sorted(flatten_rt(rt).keys())
+        if not keys:
+            tree.insert("", "end", text="(no RT data yet)")
+            return
+
+        # Group by the first path segment, then by the parent path.
+        groups = {}
+        for key in keys:
+            groups.setdefault(key.split("/")[0], []).append(key)
+
+        for group in sorted(groups):
+            node = tree.insert("", "end", text=group, open=(group == "arms"))
+            subgroups = {}
+            for key in groups[group]:
+                parent = "/".join(key.split("/")[:-1]) or group
+                subgroups.setdefault(parent, []).append(key)
+            for parent in sorted(subgroups):
+                if parent == group:
+                    target = node
+                else:
+                    # "arms/0/fb/fb_pos" -> show as "0 / fb / fb_pos" under arms
+                    target = tree.insert(node, "end", text=parent[len(group) + 1:])
+                for key in sorted(subgroups[parent]):
+                    checked = key in self._viz_selected
+                    item = tree.insert(target, "end",
+                                       text=(_VIZ_TICK if checked else _VIZ_UNTICK) + viz_signal_label(key))
+                    self._viz_checked[item] = key
+                    if checked:
+                        # Open every branch on the path to a ticked signal, so
+                        # the default selection is visible without hunting.
+                        self._viz_expand_path(target)
+
+    def _viz_expand_path(self, item):
+        while item:
+            self._viz_tree.item(item, open=True)
+            item = self._viz_tree.parent(item)
+
+    def _viz_tree_click(self, event):
+        """Toggle the tick on the clicked leaf; rows without one are left alone.
+
+        Returning "break" here would consume the click for every row, including
+        the group rows, whose expand/collapse arrow is driven by Tk's own
+        binding. Only a consumed leaf click stops propagation.
+        """
+        if not self._viz_alive:
+            return
+        item = self._viz_tree.identify_row(event.y)
+        if not item or item not in self._viz_checked:
+            return
+        key = self._viz_checked[item]
+        text = self._viz_tree.item(item, "text")
+        if text.startswith(_VIZ_TICK):
+            if key in self._viz_selected:
+                self._viz_selected.remove(key)
+            self._viz_tree.item(item, text=_VIZ_UNTICK + text[len(_VIZ_TICK):])
+        else:
+            if key not in self._viz_selected:
+                self._viz_selected.append(key)
+            self._viz_tree.item(item, text=_VIZ_TICK + text[len(_VIZ_UNTICK):])
+        self._viz_apply_selection()
+        return "break"
+
+    def _viz_clear_ticks(self):
+        """Untick every signal, so the user does not have to click them off one by one."""
+        if not self._viz_alive or not self._viz_selected:
+            return
+        self._viz_selected = []
+        for item in list(self._viz_checked):
+            text = self._viz_tree.item(item, "text")
+            if text.startswith(_VIZ_TICK):
+                self._viz_tree.item(item, text=_VIZ_UNTICK + text[len(_VIZ_TICK):])
+        self._viz_apply_selection()
+
+    def _viz_apply_selection(self):
+        """Drop buffers/lines for unticked signals; pick up newly ticked ones."""
+        for key in list(self._viz_buf):
+            if key not in self._viz_selected:
+                self._viz_buf.pop(key, None)
+        self._viz_color_slots = list(self._viz_selected)
+        self._viz_repaint_colors()
+        self._viz_redraw()
+
+    # ---- sampling -------------------------------------------------------
+    def _viz_start(self):
+        if not self._viz_alive or self._viz_running:
+            return
+        self._viz_read_controls()
+        self._viz_running = True
+        self._viz_thread = threading.Thread(target=self._viz_sample_loop, daemon=True)
+        self._viz_thread.start()
+        self._viz_start_btn.config(state="disabled")
+        self._viz_pause_btn.config(state="normal")
+        self._viz_status.config(text="sampling...", fg="green")
+        self._viz_schedule_draw()
+
+    def _viz_pause(self):
+        self._viz_running = False
+        self._viz_start_btn.config(state="normal")
+        self._viz_pause_btn.config(state="disabled")
+        if self._viz_alive:
+            self._viz_status.config(text="paused", fg="gray")
+
+    def _viz_rate_changed(self, _value=None):
+        """Rate slider callback: update the label, and the buffers if sampling."""
+        rate = self._viz_rate_var.get()
+        if self._viz_rate_label.winfo_exists():
+            self._viz_rate_label.config(text=f"{rate} Hz")
+        if self._viz_alive and self._viz_running:
+            self._viz_read_controls()
+
+    def _viz_read_controls(self):
+        """Apply the Rate slider / Window combobox; resizes the history buffers.
+
+        Called on every rate change, so the buffer length always matches the
+        rate: at 1000 Hz a 10 s window needs 10000 slots per signal.
+        """
+        try:
+            rate = float(self._viz_rate_var.get())
+        except Exception:
+            rate = float(_VIZ_RATE_DEFAULT)
+        try:
+            window = float(self._viz_window_var.get().split()[0])
+        except Exception:
+            window = 10.0
+        maxlen = max(2, int(rate * window))
+        if maxlen != self._viz_maxlen:
+            self._viz_maxlen = maxlen
+            for key, buf in self._viz_buf.items():
+                # deque(maxlen=) is fixed at construction; rebuild with the data
+                self._viz_buf[key] = collections.deque(buf, maxlen=maxlen)
+        self._viz_rate = rate
+        self._viz_window = window
+
+    def _viz_sample_loop(self):
+        """Sample latest_rt at a fixed rate until the dialog closes.
+
+        Runs off the Tk thread. It only touches the plain-python buffers, never
+        a widget; the redraw is pulled by _viz_redraw from the Tk loop.
+
+        A deadline clock is used instead of "sleep(period - work)": at 1000 Hz a
+        single 1 ms overrun would otherwise reset the cadence every cycle and the
+        achieved rate would sag well below the requested one. The rate is re-read
+        every cycle so the slider takes effect immediately.
+
+        Note the SDK feeds RT data at its own 1 ms tick, so rates above that
+        resample the same frame and can show a staircase, not error.
+        """
+        deadline = time.perf_counter()
+        while self._viz_alive and self._viz_running:
+            dm = self.data_manager
+            if dm is not None:
+                flat = flatten_rt(dm.latest_rt)
+                if flat:
+                    cycle_start = time.perf_counter()
+                    if self._viz_t0 == 0.0:
+                        self._viz_t0 = cycle_start
+                    t = cycle_start - self._viz_t0
+                    for key in self._viz_selected:
+                        if key not in flat:
+                            continue
+                        buf = self._viz_buf.get(key)
+                        if buf is None:
+                            buf = collections.deque(maxlen=self._viz_maxlen)
+                            self._viz_buf[key] = buf
+                        buf.append((t, flat[key]))
+                    self._viz_samples += 1
+            # Advance to the next slot on the deadline, not from "now": the work
+            # above is already accounted for and lateness does not accumulate.
+            period = 1.0 / max(self._viz_rate, 1.0)
+            deadline += period
+            sleep_time = deadline - time.perf_counter()
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            else:
+                self._viz_overrun += 1
+                # Too far behind to catch up by sleeping less (e.g. the rate was
+                # just raised): rebase rather than spin through a backlog.
+                if sleep_time < -5 * period:
+                    deadline = time.perf_counter()
+
+    # ---- drawing --------------------------------------------------------
+    def _viz_schedule_draw(self):
+        """Schedule the next redraw from the Tk loop; no-op once closed."""
+        if not self._viz_alive:
+            return
+        self._viz_draw_id = self._viz_win.after(_VIZ_DRAW_INTERVAL_MS, self._viz_redraw)
+
+    def _viz_redraw(self):
+        """Repaint the plot from the buffers (runs on the Tk thread)."""
+        if not self._viz_alive:
+            return
+        win = self._viz_win
+        if win is None or not win.winfo_exists():
+            return
+
+        ax = self._viz_ax
+        try:
+            # set_data() on persistent lines, never ax.clear(): clearing would
+            # throw away the toolbar's zoom/pan state every frame.
+            for key in self._viz_selected:
+                buf = self._viz_buf.get(key)
+                line = self._viz_lines.get(key)
+                if buf is None or not buf:
+                    continue
+                if line is None:
+                    # Colour by slot in the selection, not by signal family:
+                    # every visible curve must be a different colour, including
+                    # two signals from the same arm.
+                    color = f"C{self._viz_color_slot(key) % 10}"
+                    line, = ax.plot([], [], linewidth=1.0, color=color,
+                                    label=viz_signal_label(key))
+                    self._viz_lines[key] = line
+                xs = [p[0] for p in buf]
+                ys = [p[1] for p in buf]
+                line.set_data(xs, ys)
+
+            for key in list(self._viz_lines):
+                if key not in self._viz_selected:
+                    self._viz_lines.pop(key).remove()
+
+            # While paused the window holds its position, so the plot reads as
+            # frozen instead of sliding across data that is no longer arriving.
+            if self._viz_t0:
+                if self._viz_running:
+                    # The newest sample, not the wall clock: a slow rate must not
+                    # leave the view scrolled off ahead of the data.
+                    last_t = 0.0
+                    for buf in self._viz_buf.values():
+                        if buf and buf[-1][0] > last_t:
+                            last_t = buf[-1][0]
+                    self._viz_view_end = max(last_t, self._viz_window)
+                ax.set_xlim(self._viz_view_end - self._viz_window, self._viz_view_end)
+            if self._viz_auto_var.get():
+                ax.relim()
+                ax.autoscale_view(scalex=False, scaley=True)
+            # The legend is rebuilt in full every frame: a partial update would
+            # leave ghost entries behind for signals the user just unticked.
+            if self._viz_lines and self._viz_legend_wanted():
+                ax.legend(loc="upper right", fontsize=8, ncol=2)
+            elif not self._viz_lines and ax.get_legend() is not None:
+                ax.get_legend().remove()
+            self._viz_canvas.draw_idle()
+        except Exception as e:
+            print(f"[viz] redraw error: {e!r}")
+
+        self._viz_update_status()
+        self._viz_schedule_draw()
+
+    def _viz_legend_wanted(self):
+        """Legend only once it stops being a solid wall of text."""
+        return len(self._viz_lines) <= _VIZ_LEGEND_MAX
+
+    def _viz_color_slot(self, key):
+        """Stable position of a signal in the selection, used to pick a colour.
+
+        Assigning slots from the live selection keeps every curve a distinct
+        colour. Removing one signal can shift the next one onto its colour, so
+        the existing lines are repainted to match — see _viz_apply_selection.
+        """
+        try:
+            return self._viz_color_slots.index(key)
+        except ValueError:
+            return len(self._viz_color_slots) + len(self._viz_lines)
+
+    def _viz_update_status(self):
+        if not self._viz_alive or not self._viz_status.winfo_exists():
+            return
+        elapsed = (time.perf_counter() - self._viz_t0) if self._viz_t0 else 0.0
+        actual = self._viz_samples / elapsed if elapsed > 1e-6 else 0.0
+        self._viz_status.config(
+            text=f"{len(self._viz_selected)} signals | {self._viz_samples} samples | "
+                 f"{actual:.1f} Hz | overrun {self._viz_overrun}")
+
+    def _viz_clear(self):
+        """Empty every buffer, rewind the clock and rebuild the lines."""
+        self._viz_buf = {}
+        self._viz_samples = 0
+        self._viz_overrun = 0
+        self._viz_t0 = 0.0
+        self._viz_view_end = 0.0
+        # Drop the Line2D objects too, otherwise the axes would keep showing the
+        # old arrays after the buffers are gone.
+        for key in list(self._viz_lines):
+            self._viz_lines.pop(key).remove()
+        self._viz_redraw()
+
+    def _viz_close(self, win):
+        """Stop the thread, cancel the redraw, then tear the window down."""
+        self._viz_alive = False
+        self._viz_running = False
+        thread = self._viz_thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=1.0)
+        self._viz_thread = None
+        if self._viz_draw_id is not None:
+            try:
+                self.root.after_cancel(self._viz_draw_id)
+            except Exception:
+                pass
+            self._viz_draw_id = None
+        self._viz_lines = {}
+        self._viz_buf = {}
+        self._viz_checked = {}
+        self._viz_color_slots = []
+        try:
+            win.destroy()
+        except Exception:
+            pass
+        self._viz_win = None
+
+    def _viz_repaint_colors(self):
+        """Re-apply colour slots to the lines already on the axes."""
+        for key, line in self._viz_lines.items():
+            line.set_color(f"C{self._viz_color_slot(key) % 10}")
 
     # ==================== Tool dynamics identification ====================
     def tool_dynamics_dialog(self):
@@ -3846,14 +4539,24 @@ class App:
     def _hand_recv_loop(self):
         if not self.hand_auto_var.get() or not self.hand_data_manager.is_running:
             return
-        latest_in = self.hand_data_manager.latest_hand_in
-        if latest_in and "error" not in latest_in:
-            datas = latest_in.get("data") or [None, None]
-            idx = 0 if self.hand_obj_var.get() == "Arm0" else 1
-            data = datas[idx]
-            if data is not None:
-                self._hand_show_recv(latest_in.get("frame_serial", "-"), data)
-        self._hand_recv_id = self.root.after(100, self._hand_recv_loop)
+        # Never let a transient decode error escape: this runs on the Tk event
+        # loop, so an unhandled exception would tear down mainloop and kill the
+        # whole app. The loop must always be rescheduled or the panel freezes.
+        try:
+            latest_in = self.hand_data_manager.latest_hand_in
+            if latest_in and "error" not in latest_in:
+                datas = latest_in.get("data") or [None, None]
+                idx = 0 if self.hand_obj_var.get() == "Arm0" else 1
+                data = datas[idx] if len(datas) > idx else None
+                if data is not None:
+                    self._hand_show_recv(latest_in.get("frame_serial", "-"), data)
+        except Exception as e:
+            print(f"[hand_recv] exception: {e!r}")
+        finally:
+            if self.hand_auto_var.get() and self.hand_data_manager.is_running:
+                self._hand_recv_id = self.root.after(100, self._hand_recv_loop)
+            else:
+                self._hand_recv_id = None
 
     def _hand_close(self, win):
         self.hand_auto_var.set(0)
@@ -7981,5 +8684,11 @@ if __name__ == "__main__":
         foreground="darkblue",
         background="white"
     )
+
+    def _report_tk_exception(exc, val, tb):
+        traceback.print_exception(exc, val, tb)
+
+    root.report_callback_exception = _report_tk_exception
+
     app = App(root)
     root.mainloop()

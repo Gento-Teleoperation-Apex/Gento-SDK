@@ -315,6 +315,7 @@ typedef enum
 typedef enum
 {
     USER_FBK_NULL = 0,
+    USER_FBK_ROBOT_MASS = 1,   //robot mass, unit in kg, MCP x Y Z unit in m
 
     USER_FBK_ARM0_INTERNAL_FFDTOR = 100, ///< Arm0's FFD torque command, unit in N*m
     USER_FBK_ARM0_INTERNAL_TOOL_K = 101, ///< Arm0's tool kinematic parameters, tool's X/Y/Z/A/B/C
@@ -339,6 +340,8 @@ typedef enum
     USER_FBK_BODY_INTERNAL_FFDTOR = 300, ///< Body's FFD torque command, unit in N*m
     USER_FBK_BODY_INTERNAL_PD_K    = 301, ///< Body's PD proportional gain
     USER_FBK_BODY_INTERNAL_PD_D    = 302, ///< Body's PD derivative gain
+    USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MIN  = 303, ///< Body's anti-impact torque min
+    USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MAX  = 304, ///< Body's anti-impact torque max
 }FXUserFbkType;
 
 /**

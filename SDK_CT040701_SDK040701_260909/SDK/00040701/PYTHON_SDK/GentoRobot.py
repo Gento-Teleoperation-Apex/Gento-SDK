@@ -79,10 +79,11 @@ class FXTerminalType:
 class FXUserFbkType:
     """Source type of user-defined feedback channel (FX_L1_System_SetUserFbkType)."""
     USER_FBK_NULL = 0
+    USER_FBK_ROBOT_MASS = 1  #robot mass, unit in kg, MCP x Y Z unit in m
 
-    USER_FBK_ARM0_INTERNAL_FFDTOR = 100  # Arm0's FFD torque command, unit in N*m
-    USER_FBK_ARM0_INTERNAL_TOOL_K = 101  # Arm0's tool kinematic parameters, tool's X/Y/Z/A/B/C
-    USER_FBK_ARM0_INTERNAL_TOOL_D = 102  # Arm0's tool dynamic parameters, mass/mcp_x/mcp_y/mcp_z/Ixx/Iyy/Izz
+    USER_FBK_ARM0_INTERNAL_FFDTOR  = 100  # Arm0's FFD torque command, unit in N*m
+    USER_FBK_ARM0_INTERNAL_TOOL_K  = 101  # Arm0's tool kinematic parameters, tool's X/Y/Z/A/B/C
+    USER_FBK_ARM0_INTERNAL_TOOL_D  = 102  # Arm0's tool dynamic parameters, mass/mcp_x/mcp_y/mcp_z/Ixx/Iyy/Izz
     USER_FBK_ARM0_INTERNAL_JOINT_K = 103  # Arm0's joint stiffness
     USER_FBK_ARM0_INTERNAL_JOINT_D = 104  # Arm0's joint damping
     USER_FBK_ARM0_INTERNAL_CART_K  = 105  # Arm0's Cartesian stiffness parameters, X/Y/Z/A/B/C
@@ -90,9 +91,9 @@ class FXUserFbkType:
     USER_FBK_ARM0_INTERNAL_PD_K    = 107  # Arm0's PD proportional gain
     USER_FBK_ARM0_INTERNAL_PD_D    = 108  # Arm0's PD derivative gain
 
-    USER_FBK_ARM1_INTERNAL_FFDTOR = 200  # Arm1's FFD torque command, unit in N*m
-    USER_FBK_ARM1_INTERNAL_TOOL_K = 201  # Arm1's tool kinematic parameters, tool's X/Y/Z/A/B/C
-    USER_FBK_ARM1_INTERNAL_TOOL_D = 202  # Arm1's tool parameters, mass/mcp_x/mcp_y/mcp_z/Ixx/Iyy/Izz
+    USER_FBK_ARM1_INTERNAL_FFDTOR  = 200  # Arm1's FFD torque command, unit in N*m
+    USER_FBK_ARM1_INTERNAL_TOOL_K  = 201  # Arm1's tool kinematic parameters, tool's X/Y/Z/A/B/C
+    USER_FBK_ARM1_INTERNAL_TOOL_D  = 202  # Arm1's tool parameters, mass/mcp_x/mcp_y/mcp_z/Ixx/Iyy/Izz
     USER_FBK_ARM1_INTERNAL_JOINT_K = 203  # Arm1's joint stiffness
     USER_FBK_ARM1_INTERNAL_JOINT_D = 204  # Arm1's joint damping
     USER_FBK_ARM1_INTERNAL_CART_K  = 205  # Arm1's Cartesian stiffness parameters, X/Y/Z/A/B/C
@@ -100,11 +101,12 @@ class FXUserFbkType:
     USER_FBK_ARM1_INTERNAL_PD_K    = 207  # Arm1's PD proportional gain
     USER_FBK_ARM1_INTERNAL_PD_D    = 208  # Arm1's PD derivative gain
 
-    USER_FBK_BODY_INTERNAL_FFDTOR = 300  # Body's FFD torque command, unit in N*m
+    USER_FBK_BODY_INTERNAL_FFDTOR  = 300  # Body's FFD torque command, unit in N*m
     USER_FBK_BODY_INTERNAL_PD_K    = 301  # Body's PD proportional gain
     USER_FBK_BODY_INTERNAL_PD_D    = 302  # Body's PD derivative gain
+    USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MIN  = 303  #Body's anti-impact torque min
+    USER_FBK_BODY_INTERNAL_ANTIIP_TOR_MAX  = 304  #Body's anti-impact torque max
     
-
 
 class FXHandType:
     """Hand types"""
