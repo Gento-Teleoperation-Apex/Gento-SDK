@@ -1,5 +1,12 @@
 # Gento SDK
 
+本分支 `update/sdk-4.7.0-tjhand-0826` 导入了 `gento_sdk_0826_with_TJHand`
+提供的 **4.7.0 加手 SDK**，基于 `update/sdk-4.7.0`。
+SDK 位于 `SDK_CT040700_SDK040700_260824/SDK/00040700`，
+手接口位于其 `TJHandInterface` 子目录。
+原始文件已导入；Linux 加手构建和 Debian 打包仍需适配，详见
+[来源、差异及验证说明](TJHAND_IMPORT.md)。
+
 ## CI 自动打包和发布
 
 GitHub Actions workflow 位于 `.github/workflows/build-sdk-debs.yml`，会为 Ubuntu 20.04、22.04、24.04 生成 `amd64` 和 `arm64` Debian 包。

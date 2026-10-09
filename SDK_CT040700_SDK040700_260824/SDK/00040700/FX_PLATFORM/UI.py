@@ -1258,7 +1258,7 @@ class App:
             return
         ret = robot.system_set_user_fbk_type(chn_id, fbk_type)
         if ret != 0:
-            messagebox.showerror('Failed', f'set user fbk type failed: {robot._get_operate_error_msg(ret)}')
+            messagebox.showerror('Failed', f'set user fbk type failed. Error msg: {robot._get_operate_error_msg(ret)}')
         else:
             messagebox.showinfo('OK', f'chn{chn_id} set to fbk_type {fbk_type} ({self._user_fbk_type_map.get(fbk_type, "")})')
 
@@ -1475,7 +1475,7 @@ class App:
                 log_mask=FXLogMask.FX_LOG_ALL_FLAG
                 ret = robot.link(ip_parts[0], ip_parts[1], ip_parts[2], ip_parts[3],log_mask)
                 if ret <0:
-                    messagebox.showerror('Failed!', f"Robot connection failed, error msg: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror('Failed!', f"Robot connection failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     self._reset_ui_after_disconnect()
                     return
                 else:
@@ -1579,8 +1579,8 @@ class App:
                 try:
                     ret, fw_versions, cfg_versions = robot.get_ctrl_obj_servo_version(obj_type)
                     if ret < 0:
-                        self.servo_versions[device] = f"Error: {robot._get_operate_error_msg(ret)}"
-                        self.servo_cfg_versions[device] = f"Error: {robot._get_operate_error_msg(ret)}"
+                        self.servo_versions[device] = f"Error msg: {robot._get_operate_error_msg(ret)}"
+                        self.servo_cfg_versions[device] = f"Error msg: {robot._get_operate_error_msg(ret)}"
                         return
                     fw_str = ", ".join(str(v) for v in fw_versions)
                     cfg_str = ", ".join(str(v) for v in cfg_versions)
@@ -1600,8 +1600,8 @@ class App:
                 try:
                     ret, ver, serial = robot.get_ctrl_obj_sensor_version_and_serial(obj_type)
                     if ret < 0:
-                        self.sensor_versions[device] = f"Error: {robot._get_operate_error_msg(ret)}"
-                        self.sensor_serials[device]= f"Error: {robot._get_operate_error_msg(ret)}"
+                        self.sensor_versions[device] = f"Error msg: {robot._get_operate_error_msg(ret)}"
+                        self.sensor_serials[device]= f"Error msg: {robot._get_operate_error_msg(ret)}"
                         return
                     if isinstance(ver, (list, tuple)):
                         ver_str = ", ".join(str(v) for v in ver)
@@ -2293,7 +2293,7 @@ class App:
             obj_type = self._obj_name_to_type(obj)
             ret =robot.switch_to_idle(obj_type, 1000)
             if ret !=0:
-                messagebox.showerror('Error', f"Set idle failed: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror('Error', f"Set idle failed. Error msg: {robot._get_operate_error_msg(ret)}")
         except Exception as e:
             messagebox.showerror('Error', f"Set idle failed: {e}")
 
@@ -2305,7 +2305,7 @@ class App:
             arm_idx = 0 if obj == 'Arm0' else 1
             ret=robot.switch_to_collab_release(arm_idx, 1000)
             if ret!=0:
-                messagebox.showerror('Failed!', f'{obj} switch to collaborative release failed: {robot._get_operate_error_msg(ret)}')
+                messagebox.showerror('Failed!', f'{obj} switch to collaborative release failed. Error msg: {robot._get_operate_error_msg(ret)}')
         except Exception as e:
             messagebox.showerror('Error', f"CR failed: {e}")
 
@@ -2331,7 +2331,7 @@ class App:
                 vel = acc = 20
             ret=robot.switch_to_position_mode(obj_type, 1000, vel, acc)
             if ret!=0:
-                messagebox.showerror('Error', f"{obj} switch to position state failed:\n {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror('Error', f"{obj} switch to position state failed. Error msg: \n {robot._get_operate_error_msg(ret)}")
         except Exception as e:
             messagebox.showerror('Error', f"Set position state failed: {e}")
 
@@ -2879,12 +2879,12 @@ class App:
 
             ret=robot.terminal_clear(terminal)
             if ret!= 0:
-                messagebox.showerror('Failed', f'{obj} can not clear {com_str} buffer: {robot._get_operate_error_msg(ret)}')
+                messagebox.showerror('Failed', f'{obj} can not clear {com_str} buffer. Error msg: {robot._get_operate_error_msg(ret)}')
                 return
             time.sleep(0.01)
             ret, send_time=robot.terminal_set(terminal, com, sample_data)
             if ret!= 0:
-                messagebox.showerror('Failed', f'{obj} set data to {com_str} failed: {robot._get_operate_error_msg(ret)}')
+                messagebox.showerror('Failed', f'{obj} set data to {com_str} failed. Error msg:  {robot._get_operate_error_msg(ret)}')
                 return
 
             for _ in range(200):
@@ -3555,7 +3555,7 @@ class App:
             return
         if ret != 0:
             messagebox.showerror("Failed",
-                                 "runtime_set_tool_d failed: {}".format(robot._get_operate_error_msg(ret)))
+                                 "runtime_set_tool_d failed. Error msg:  {}".format(robot._get_operate_error_msg(ret)))
         else:
             self._tdid_log("Tool dynamics set on {}.".format(self.tdid_arm_var.get()))
 
@@ -3646,7 +3646,7 @@ class App:
             return
         ret = robot.hand_set_data(self._hand_obj(), hex_str)
         if ret != 0:
-            messagebox.showerror("Failed", "hand_set_data failed: {}".format(robot._get_operate_error_msg(ret)))
+            messagebox.showerror("Failed", "hand_set_data failed. Error msg:  {}".format(robot._get_operate_error_msg(ret)))
             return
         # show the full 512-byte data that was actually sent
         self.hand_send_text.delete("1.0", tk.END)
@@ -3664,7 +3664,7 @@ class App:
             messagebox.showerror("Error", "hand_get_data failed: {}".format(e))
             return
         if ret != 0:
-            messagebox.showerror("Failed", "hand_get_data failed: {}".format(robot._get_operate_error_msg(ret)))
+            messagebox.showerror("Failed", "hand_get_data failed. Error msg:  {}".format(robot._get_operate_error_msg(ret)))
             return
         self._hand_show_recv(serial, data)
 
@@ -4662,10 +4662,10 @@ class App:
                 raw_array, point_num = ret
                 ret1=robot.config_set_traj(FXObjType.OBJ_ARM0, raw_array, point_num)
                 if ret1!= 0:
-                    messagebox.showerror("Failed!", f"Arm0 send planning points failed: {robot._get_operate_error_msg(ret1)}")
+                    messagebox.showerror("Failed!", f"Arm0 send planning points failed. Error msg:  {robot._get_operate_error_msg(ret1)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror("Error", f"Arm0 planning failed. Error msg:  {robot._get_operate_error_msg(ret)}")
                 return
 
 
@@ -4681,10 +4681,10 @@ class App:
                 raw_array, point_num = ret
                 ret1= robot.config_set_traj(FXObjType.OBJ_ARM1, raw_array, point_num)
                 if ret1 != 0:
-                    messagebox.showerror("Failed!", f"Arm1 send planning points failed: {robot._get_operate_error_msg(ret1)}")
+                    messagebox.showerror("Failed!", f"Arm1 send planning points failed. Error msg: {robot._get_operate_error_msg(ret1)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm1 planning failed, error msg: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror("Error", f"Arm1 planning failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return
 
             mask = FXObjMask.OBJ_ARM1_FLAG
@@ -4698,20 +4698,20 @@ class App:
             if isinstance(points0, tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM0, points0[0],points0[1])
                 if ret!=0:
-                    messagebox.showerror("Failed!", f"Arm0 send planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm0 send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(points0)}")
+                messagebox.showerror("Error", f"Arm0 planning failed. Error msg: {robot._get_operate_error_msg(points0)}")
                 return
 
             points1 = robot.plan_joints(1, start1, end1, vel, acc, freq)
             if isinstance(points1, tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM1, points1[0],points1[1])
                 if ret!=0:
-                    messagebox.showerror("Failed!", f"Arm1 send Planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm1 send Planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm1 planning failed, error msg: {robot._get_operate_error_msg(points1)}")
+                messagebox.showerror("Error", f"Arm1 planning failed. Error msg: {robot._get_operate_error_msg(points1)}")
                 return
 
             mask=FXObjMask.OBJ_ARM0_FLAG | FXObjMask.OBJ_ARM1_FLAG
@@ -4786,10 +4786,10 @@ class App:
                 raw_array, point_num = ret
                 ret1=robot.config_set_traj(FXObjType.OBJ_ARM0, raw_array, point_num)
                 if ret1!= 0:
-                    messagebox.showerror("Failed!", f"Arm0 send planning points failed: {robot._get_operate_error_msg(ret1)}")
+                    messagebox.showerror("Failed!", f"Arm0 send planning points failed. Error msg: {robot._get_operate_error_msg(ret1)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror("Error", f"Arm0 planning failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return
 
             mask = FXObjMask.OBJ_ARM0_FLAG
@@ -4804,10 +4804,10 @@ class App:
                 raw_array, point_num = ret
                 ret1=robot.config_set_traj(FXObjType.OBJ_ARM1, raw_array, point_num)
                 if ret1!= 0:
-                    messagebox.showerror("Failed!", f"Arm1 send planning points failed: {robot._get_operate_error_msg(ret1)}")
+                    messagebox.showerror("Failed!", f"Arm1 send planning points failed. Error msg: {robot._get_operate_error_msg(ret1)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm1 Planning failed, error msg: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror("Error", f"Arm1 Planning failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return
 
 
@@ -4822,20 +4822,20 @@ class App:
             if isinstance(points0, tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM0, points0[0], points0[1])
                 if ret!= 0:
-                    messagebox.showerror("Failed!", f"Arm0 send planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm0 send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(points0)}")
+                messagebox.showerror("Error", f"Arm0 planning failed. Error msg: {robot._get_operate_error_msg(points0)}")
                 return
 
             points1 = robot.plan_linear_keep_joints(1, start1, end1, vel, acc, freq)
             if isinstance(points1, tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM1, points1[0], points1[1])
                 if ret!= 0:
-                    messagebox.showerror("Failed!", f"Arm1 send planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm1 send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
-                messagebox.showerror("Error", f"Arm1 planning failed, error msg: {robot._get_operate_error_msg(points1)}")
+                messagebox.showerror("Error", f"Arm1 planning failed. Error msg: {robot._get_operate_error_msg(points1)}")
                 return
 
             mask = FXObjMask.OBJ_ARM0_FLAG | FXObjMask.OBJ_ARM1_FLAG
@@ -4976,11 +4976,11 @@ class App:
             if isinstance(points, tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM0, points[0],points[1])
                 if ret!=0:
-                    messagebox.showerror("Failed!", f"Arm0 send planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm0 send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
                 messagebox.showerror("Error",
-                                     f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(points)}")
+                                     f"Arm0 planning failed. Error msg: {robot._get_operate_error_msg(points)}")
                 return
 
 
@@ -4995,11 +4995,11 @@ class App:
             if isinstance(points,tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM1, points[0],points[1])
                 if ret!=0:
-                    messagebox.showerror("Failed!", f"Arm1 send planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm1 send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
                 messagebox.showerror("Error",
-                                     f"Arm1 planning failed, error msg: {robot._get_operate_error_msg(points)}")
+                                     f"Arm1 planning failed. Error msg: {robot._get_operate_error_msg(points)}")
                 return
 
 
@@ -5014,22 +5014,22 @@ class App:
             if isinstance(points0,tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM0, points0[0],points0[1])
                 if ret!=0:
-                    messagebox.showerror("Failed!", f"Arm0 send Planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm0 send Planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
                 messagebox.showerror("Error",
-                                     f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(points0)}")
+                                     f"Arm0 planning failed. Error msg: {robot._get_operate_error_msg(points0)}")
                 return
 
             points1 = robot.plan_linear(1, start1, end1,ref1,vel, acc, freq)
             if isinstance(points1,tuple):
                 ret=robot.config_set_traj(FXObjType.OBJ_ARM1, points1[0],points1[1])
                 if ret!=0:
-                    messagebox.showerror("Failed!", f"Arm0 send Planning points failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror("Failed!", f"Arm0 send Planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
             else:
                 messagebox.showerror("Error",
-                                     f"Arm1 planning failed, error msg: {robot._get_operate_error_msg(points1)}")
+                                     f"Arm1 planning failed. Error msg: {robot._get_operate_error_msg(points1)}")
                 return
 
 
@@ -5218,23 +5218,23 @@ class App:
         ret = robot.plan_linear_multi_points_set_start(arm_idx, start_joints, points[0], points[1], allow_range,
                                                        zsp_type, zsp_params, vel, acc, freq)
         if ret != 0:
-            messagebox.showerror("Error", f"{arm_name} planning failed, error msg: {robot._get_operate_error_msg(ret)}")
+            messagebox.showerror("Error", f"{arm_name} planning failed. Error msg: {robot._get_operate_error_msg(ret)}")
             return False
 
         for next_one in points[2:]:
             ret = robot.plan_linear_multi_points_set_next(arm_idx, next_one, allow_range, zsp_type, zsp_params, vel, acc)
             if ret != 0:
-                messagebox.showerror("Error", f"{arm_name} planning failed, error msg: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror("Error", f"{arm_name} planning failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return False
 
         pts = robot.plan_linear_multi_points_get_points()
         if isinstance(pts, tuple):
             ret = robot.config_set_traj(obj_type, pts[0], pts[1])
             if ret != 0:
-                messagebox.showerror("Failed!", f"{arm_name} send planning points failed: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror("Failed!", f"{arm_name} send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return False
         else:
-            messagebox.showerror("Error", f"{arm_name} planning failed, error msg: {robot._get_operate_error_msg(pts)}")
+            messagebox.showerror("Error", f"{arm_name} planning failed. Error msg: {robot._get_operate_error_msg(pts)}")
             return False
         return True
 
@@ -5359,17 +5359,17 @@ class App:
 
         ret = robot.plan_linear_synchronous(arms_structure_params)
         if not isinstance(ret, tuple):
-            messagebox.showerror("Error", f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(ret)}")
+            messagebox.showerror("Error", f"Arm0 planning failed. Error msg: {robot._get_operate_error_msg(ret)}")
             return
 
         raw_array0, raw_array1, point_num = ret
         ret=robot.config_set_traj(FXObjType.OBJ_ARM0, raw_array0, point_num)
         if ret!=0:
-            messagebox.showerror("Failed!", f"Arm0 send planning points failed: {robot._get_operate_error_msg(ret)}")
+            messagebox.showerror("Failed!", f"Arm0 send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
             return
         ret=robot.config_set_traj(FXObjType.OBJ_ARM1, raw_array1, point_num)
         if ret!=0:
-            messagebox.showerror("Failed!", f"Arm1 send planning points failed: {robot._get_operate_error_msg(ret)}")
+            messagebox.showerror("Failed!", f"Arm1 send planning points failed. Error msg: {robot._get_operate_error_msg(ret)}")
             return
 
         mask = FXObjMask.OBJ_ARM0_FLAG | FXObjMask.OBJ_ARM1_FLAG
@@ -5392,7 +5392,7 @@ class App:
             obj_type = self._obj_name_to_type(obj)
             ret=robot.config_disable_soft_limit(obj_type, axis_mask)
             if ret!= 0:
-                messagebox.showerror('Failed', f'{obj} disable soft limit failed: {robot._get_operate_error_msg(ret)} ')
+                messagebox.showerror('Failed', f'{obj} disable soft limit failed. Error msg: {robot._get_operate_error_msg(ret)} ')
         except Exception as e:
             messagebox.showerror('Error', f'Disable soft limit error: {e}')
 
@@ -5401,7 +5401,7 @@ class App:
             obj_type = self._obj_name_to_type(obj)
             ret=robot.config_clear_sensor_offset(obj_type)
             if ret!= 0:
-                messagebox.showerror('Failed', f'{obj} clear sensor offset failed: {robot._get_operate_error_msg(ret)} ')
+                messagebox.showerror('Failed', f'{obj} clear sensor offset failed. Error msg: {robot._get_operate_error_msg(ret)} ')
         except Exception as e:
             messagebox.showerror('Error', f'Clear sensor offset error: {e}')
 
@@ -5416,7 +5416,7 @@ class App:
             axis_mask = 0x7F  # All 7 axes
             ret=robot.config_reset_enc_offset(obj_type, axis_mask)
             if ret!= 0:
-                messagebox.showerror('Failed!', f"{obj} reset encoder offset failed: {robot._get_operate_error_msg(ret)} ")
+                messagebox.showerror('Failed!', f"{obj} reset encoder offset failed. Error msg: {robot._get_operate_error_msg(ret)} ")
                 return
         except Exception as e:
             messagebox.showerror('Error', str(e))
@@ -5436,7 +5436,7 @@ class App:
             axis_mask = 0x7F  # All 7 axes
             ret=robot.config_clear_enc_error(obj_type, axis_mask)
             if ret!= 0:
-                messagebox.showerror('Failed!', f"{obj}Clear encoder error failed: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror('Failed!', f"{obj}Clear encoder error failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return
         except Exception as e:
             messagebox.showerror('Error', str(e))
@@ -5922,7 +5922,7 @@ class App:
             set_ft_btn = tk.Button(force_torque_frame, text="Set Force/Torque", width=20,
                                    command=lambda: self.force_torque_set('Arm0'))
             set_ft_btn.grid(row=0, column=0, padx=5, pady=10)
-            tk.Label(force_torque_frame, text="Force(dir_x,dir_y,dir_z,force(-50~50N),distance(<50mm)):",
+            tk.Label(force_torque_frame, text="Force(dir_x,dir_y,dir_z,force(-50~50N),distance(1mm~200mm)):",
                      font=('Arial', 9), bg='white', width=50).grid(row=0, column=1)
             force_entry = tk.Entry(force_torque_frame, textvariable=self.force_a_entry, width=30)
             force_entry.grid(row=0, column=2)
@@ -6024,7 +6024,7 @@ class App:
             set_ft_btn = tk.Button(force_torque_frame, text="Set Force/Torque", width=20,
                                    command=lambda: self.force_torque_set('Arm1'))
             set_ft_btn.grid(row=0, column=0, padx=5, pady=10)
-            tk.Label(force_torque_frame, text="Force(dir_x,dir_y,dir_z,force(-50~50N),distance(<50mm)):",
+            tk.Label(force_torque_frame, text="Force(dir_x,dir_y,dir_z,force(-50~50N),distance(1mm~200mm)):",
                      font=('Arial', 9), bg='white', width=50).grid(row=0, column=1)
             force_entry = tk.Entry(force_torque_frame, textvariable=self.force_b_entry, width=25)
             force_entry.grid(row=0, column=2)
@@ -6518,7 +6518,7 @@ class App:
             ret = robot.switch_to_pd_mode(obj_type, 2000, vel, acc, k_list, d_list)
             if ret != 0:
                 messagebox.showerror('Failed!',
-                                     f'{obj} switch to PD failed: {robot._get_operate_error_msg(ret)}')
+                                     f'{obj} switch to PD failed. Error msg: {robot._get_operate_error_msg(ret)}')
                 return
         except Exception as e:
             messagebox.showerror('Error', f'PD switch failed: {e}')
@@ -6563,7 +6563,7 @@ class App:
                     return
             ret = robot.switch_to_imp_joint_mode(obj_type, 2000, vel, acc, k_list, d_list)
             if ret != 0:
-                messagebox.showerror('Failed!', f'{obj} switch to joint impedance failed: {robot._get_operate_error_msg(ret)}')
+                messagebox.showerror('Failed!', f'{obj} switch to joint impedance failed. Error msg: {robot._get_operate_error_msg(ret)}')
                 return
         except Exception as e:
             messagebox.showerror('Error', f'Joint Impedance switch failed: {e}')
@@ -6615,7 +6615,7 @@ class App:
                 return
             ret = robot.switch_to_imp_cart_mode(obj_type, 2000,ref_type, ori_list, vel, acc, k_list, d_list)
             if ret != 0:
-                messagebox.showerror('Failed!', f'{obj} switch to cartesian impedance failed: {robot._get_operate_error_msg(ret)}')
+                messagebox.showerror('Failed!', f'{obj} switch to cartesian impedance failed. Error msg: {robot._get_operate_error_msg(ret)}')
                 return
         except Exception as e:
             messagebox.showerror('Error', f'Cartesian Impedance switch failed: {e}')
@@ -6661,7 +6661,7 @@ class App:
                 return
             ret = robot.switch_to_imp_force_mode(obj_type, 2000, ref_type, ori_list, force_ctrl, torque_ctrl)
             if ret != 0:
-                messagebox.showerror('Failed!', f'{obj} switch to force impedance failed: {robot._get_operate_error_msg(ret)}')
+                messagebox.showerror('Failed!', f'{obj} switch to force impedance failed. Error msg: {robot._get_operate_error_msg(ret)}')
                 return
         except ValueError as e:
             messagebox.showerror('Error', f'Invalid number format in Force/Torque: {e}')
@@ -6763,7 +6763,7 @@ class App:
                 messagebox.showerror('Error', f'Unknown drag mode: {mode}')
                 return
             if ret != 0:
-                messagebox.showerror('Failed!', f'{obj} switch to {mode} drag failed: {robot._get_operate_error_msg(ret)}')
+                messagebox.showerror('Failed!', f'{obj} switch to {mode} drag failed. Error msg: {robot._get_operate_error_msg(ret)}')
         except Exception as e:
             messagebox.showerror('Error', f'Drag mode switch failed: {e}')
 
@@ -6776,7 +6776,7 @@ class App:
             obj_type = self._obj_name_to_type(obj)
             ret,msg = robot.get_servo_error_codes(obj_type)
             if ret !=0:
-                messagebox.showerror("Failed!", f"{obj} get error codes failed: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror("Failed!", f"{obj} get error codes failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return
             else:
                 messagebox.showinfo(f'{obj} Servo Error Details:', msg)
@@ -6805,7 +6805,7 @@ class App:
                     axis_mask = 0xFF
                 ret=robot.config_brake_unlock(obj_type, axis_mask)
                 if ret!= 0:
-                    messagebox.showerror('Failed!', f"{obj} release brake failed: {robot._get_operate_error_msg(ret)}")
+                    messagebox.showerror('Failed!', f"{obj} release brake failed. Error msg: {robot._get_operate_error_msg(ret)}")
                     return
         except Exception as e:
             messagebox.showerror('Error', f"Release brake failed: {e}")
@@ -6830,7 +6830,7 @@ class App:
                 axis_mask = 0xFF
             ret=robot.config_brake_lock(obj_type, axis_mask)
             if ret!= 0:
-                messagebox.showerror('Failed!', f"{obj} brake lock failed: {robot._get_operate_error_msg(ret)}")
+                messagebox.showerror('Failed!', f"{obj} brake lock failed. Error msg: {robot._get_operate_error_msg(ret)}")
                 return
         except Exception as e:
             messagebox.showerror('Error', f"Brake lock failed: {e}")
@@ -6906,7 +6906,7 @@ class App:
                     refresh_sn()
                 else:
                     messagebox.showerror("Failed",
-                                         f"Failed to set SN.\nError: {robot._get_operate_error_msg(ret)}")
+                                         f"Failed to set SN.\nError msg:  {robot._get_operate_error_msg(ret)}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to set SN: {e}")
 
@@ -6995,7 +6995,7 @@ class App:
                 else:
                     messagebox.showerror("Failed",
                                          f"Failed to set IP address.\n"
-                                         f"Error: {robot._get_operate_error_msg(ret)}")
+                                         f"Error msg: {robot._get_operate_error_msg(ret)}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to set IP: {e}")
 
@@ -7089,7 +7089,7 @@ class App:
                     refresh_robot_time()
                 else:
                     messagebox.showerror("Failed",
-                                         f"Failed to set time.\nError: {robot._get_operate_error_msg(ret)}")
+                                         f"Failed to set time.\nError msg: {robot._get_operate_error_msg(ret)}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to set time: {e}")
 
@@ -7126,7 +7126,7 @@ class App:
                     config_ip_window.destroy()
                 else:
                     messagebox.showerror("Failed",
-                                         f"Reboot failed.\nError: {robot._get_operate_error_msg(ret)}")
+                                         f"Reboot failed.\nError msg: {robot._get_operate_error_msg(ret)}")
             except Exception as e:
                 messagebox.showerror("Error", f"Reboot failed: {e}")
 

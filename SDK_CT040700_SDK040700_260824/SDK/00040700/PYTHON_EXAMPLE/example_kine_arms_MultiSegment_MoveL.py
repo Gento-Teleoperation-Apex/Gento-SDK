@@ -206,7 +206,7 @@ def main():
                                                     allow_range, zsp_type, zsp_params,
                                                     pln_vel, pln_acc, pln_freq)
     if ret01 != 0:
-        print(f"Arm1 planning set start failed. Error msg: {robot._get_kinematics_error_msg(ret01)}")
+        print(f"Arm1 planning set start failed. Error msg: {robot._get_operate_error_msg(ret01)}")
         return
     for next_one1 in arm1_multi_points[2:]:
         ret11 = robot.plan_linear_multi_points_set_next(1, next_one1, allow_range, zsp_type, zsp_params, pln_vel, pln_acc)

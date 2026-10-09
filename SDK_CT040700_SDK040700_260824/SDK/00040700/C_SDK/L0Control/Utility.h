@@ -34,7 +34,7 @@ typedef struct
 	FX_CHAR m_SendBuf[1500];
 	FX_INT32 m_Rlen;
 	FX_INT32 m_Slen;
-	std::atomic<FX_INT32> m_STag;
+	FX_INT32 m_STag;
 } NC_BUF;
 
 class CMarvNetAgent

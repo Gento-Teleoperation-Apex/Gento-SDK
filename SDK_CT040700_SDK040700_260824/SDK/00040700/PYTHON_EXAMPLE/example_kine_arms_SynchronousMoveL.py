@@ -200,7 +200,7 @@ def main():
 
     ret = robot.plan_linear_synchronous(arms_structure_params)
     if not isinstance(ret, tuple):
-        print(f"Synchronous planning failed, error msg: {robot._get_kinematics_error_msg(ret)}")
+        print(f"Synchronous planning failed, error msg: {robot._get_operate_error_msg(ret)}")
         return
     raw_array0, raw_array1, point_num = ret
     ret = robot.config_set_traj(FXObjType.OBJ_ARM0, raw_array0, point_num)

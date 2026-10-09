@@ -631,7 +631,8 @@ FX_BOOL RobotCtrl::System_SetSN(char serial_number[30])
 	memset(&buf, 0, sizeof(OP_SET));
 	buf.m_OpCmdSerial = serial;
 	buf.m_OpIns = OPINS_SYSTEM_SET_SN;
-    memcpy(buf.m_OpValueS, serial_number, 30);
+    strncpy(buf.m_OpValueS, serial_number, sizeof(buf.m_OpValueS) - 1);
+    buf.m_OpValueS[sizeof(buf.m_OpValueS) - 1] = '\0';
 	if (!SetRawData(FX_DEFAULT_THREAD_ID, UDP_OPERATION, 44, (FX_UCHAR *)&buf))
 	{
 		return FX_FALSE;
@@ -3284,11 +3285,11 @@ FX_VOID RobotCtrl::DoSend()
 {
 	RobotCtrl *ins = RobotCtrl::GetIns();
 
-	if (ins->m_RtSendLock)
+	// 原子地“测试并锁定”：避免 check-then-act 竞态导致多个线程同时进入发送流程
+	if (ins->m_RtSendLock.exchange(FX_TRUE) != FX_FALSE)
 	{
 		return;
 	}
-	ins->m_RtSendLock = FX_TRUE;
 
 	FX_UCHAR read_buf[2048] = {0};
 	FX_INT32 read_buf_len = 0;
@@ -3340,8 +3341,8 @@ FX_VOID RobotCtrl::DoSend()
 		ins->m_RT_NA.m_buf.m_SendBuf[4] = crc;
 		ins->m_RT_NA.OnSend();
 	}
-    
-    ins->m_RtSendLock = FX_FALSE;
+
+    ins->m_RtSendLock.store(FX_FALSE);
 }
 
 FX_BOOL RobotCtrl::WaitOpReturn(FX_INT32 serial, FX_INT32 timeout)

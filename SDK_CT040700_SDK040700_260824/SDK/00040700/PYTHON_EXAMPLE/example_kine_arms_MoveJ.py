@@ -178,7 +178,7 @@ def main():
             print(f"Arm0 send planning points failed: {robot._get_operate_error_msg(ret)}")
             return
     else:
-        print(f"Arm0 planning failed, error msg: {robot._get_kinematics_error_msg(points0)}")
+        print(f"Arm0 planning failed, error msg: {robot._get_operate_error_msg(points0)}")
         return
 
     points1 = robot.plan_joints(1, initial_pos, arm1_end_pos, pln_vel, pln_acc, pln_freq)
@@ -188,7 +188,7 @@ def main():
             print(f"Arm1 send Planning points failed: {robot._get_operate_error_msg(ret)}")
             return
     else:
-        print(f"Arm1 planning failed, error msg: {robot._get_kinematics_error_msg(points1)}")
+        print(f"Arm1 planning failed, error msg: {robot._get_operate_error_msg(points1)}")
         return
 
     print(f"\n### 8/10. Run trajectory")

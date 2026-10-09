@@ -1705,7 +1705,8 @@ class GentoRobot:
             raise ValueError("serial must not be empty")
         if len(serial) > 29:
             raise ValueError("serial must be at most 29 characters")
-        return self.dll.FX_L1_System_SetSN(serial.encode('utf-8'))
+        buf = create_string_buffer(serial.encode('utf-8'), 30)
+        return self.dll.FX_L1_System_SetSN(buf)
 
     def get_system_sn(self) -> tuple:
         """Get the robot serial number.

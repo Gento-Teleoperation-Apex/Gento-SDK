@@ -126,7 +126,10 @@ int FX_Interf_GetInterfSpan(FX_InterfHandle handle, long serial, double *MinSpan
         return FUNC_RET_INVALID_INPUT_ARG;
     }
     double minspan = 0;
-    handle->_base->FX_OnGetInterfSpan(serial, minspan);
+    if(!handle->_base->FX_OnGetInterfSpan(serial, minspan))
+    {
+        return FUNC_RET_OPERATION_FAILED;
+    }
     *MinSpan = minspan;
     return FUNC_RET_SUCCESS;
 }

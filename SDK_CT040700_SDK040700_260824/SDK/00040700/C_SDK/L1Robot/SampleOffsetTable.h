@@ -12,7 +12,8 @@ typedef struct
 static const OffsetTableItem g_RT_OffsetTable[] =
 {
     {"ROBOT_RT.m_RT_FrameSerial",                           FX_int,               1},
-    {"ROBOT_RT.m_DEVICE.m_DEVICE_FBK_Base_Gyro",            FX_float,             6},
+    {"ROBOT_RT.m_DEVICE.m_DEVICE_FBK_Robot_IMU",            FX_float,             9},
+    {"ROBOT_RT.m_DEVICE.m_DEVICE_FBK_Agv_IMU",              FX_float,             9},
     {"ROBOT_RT.m_DEVICE.m_DEVICE_FBK_Pdo_State",            FX_char,              3},
     {"ROBOT_RT.m_DEVICE.m_DEVICE_Pad",                      FX_char,              1},
     // ===================== HEAD_RT =====================

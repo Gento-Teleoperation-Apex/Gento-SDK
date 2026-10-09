@@ -367,11 +367,11 @@ FX_BOOL CACB::WriteBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	{
 		return FX_FALSE;
 	}
-	if (write_lock_ != 0)
+	// 原子地“测试并锁定”：避免 check-then-act 竞态导致双重进入临界区
+	if (write_lock_.exchange(1) != 0)
 	{
 		return FX_FALSE;
 	}
-	write_lock_ = 1;
 
 	FX_INT32 emptysize;
 	FX_INT32 wpos = write_pos_;
@@ -477,11 +477,11 @@ FX_INT32 CACB::ReadBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	{
 		return -1;
 	}
-	if (read_lock_ != 0)
+	// 原子地“测试并锁定”，避免 check-then-act 竞态
+	if (read_lock_.exchange(1) != 0)
 	{
 		return -1;
 	}
-	read_lock_ = 1;
 
 	FX_INT32 wpos = write_pos_;
 	FX_INT32 rpos = read_pos_;
@@ -489,7 +489,7 @@ FX_INT32 CACB::ReadBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	rpos %= size_;
 	if (rpos == wpos)
 	{
-		read_lock_ = 0;
+		read_lock_.store(0);
 		return 0;
 	}
 
@@ -500,7 +500,7 @@ FX_INT32 CACB::ReadBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	sizetmp += base_[rpos];
 	if (size_int < sizetmp)
 	{
-		read_lock_ = 0;
+		read_lock_.store(0);
 		return -2;
 	}
 
@@ -526,7 +526,7 @@ FX_INT32 CACB::ReadBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	rpos += (sizetmp - 1);
 	rpos %= size_;
 	read_pos_ = rpos;
-	read_lock_ = 0;
+	read_lock_.store(0);
 
 	item_num_--;
 	return sizetmp;
@@ -538,11 +538,11 @@ FX_INT32 CACB::PeekBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	{
 		return -1;
 	}
-	if (read_lock_ != 0)
+	// 原子地“测试并锁定”，避免 check-then-act 竞态
+	if (read_lock_.exchange(1) != 0)
 	{
 		return -1;
 	}
-	read_lock_ = 1;
 
 	FX_INT32 wpos = write_pos_;
 	FX_INT32 rpos = read_pos_;
@@ -550,7 +550,7 @@ FX_INT32 CACB::PeekBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	rpos %= size_;
 	if (rpos == wpos)
 	{
-		read_lock_ = 0;
+		read_lock_.store(0);
 		return 0;
 	}
 
@@ -561,7 +561,7 @@ FX_INT32 CACB::PeekBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	sizetmp += base_[rpos];
 	if (size_int < sizetmp)
 	{
-		read_lock_ = 0;
+		read_lock_.store(0);
 		return -2;
 	}
 
@@ -584,7 +584,7 @@ FX_INT32 CACB::PeekBuf(FX_UCHAR *data_ptr, FX_INT32 size_int)
 	{
 		memcpy(data_ptr, &base_[rpos], sizetmp);
 	}
-	read_lock_ = 0;
+	read_lock_.store(0);
 
 	return sizetmp;
 }
@@ -595,19 +595,23 @@ FX_BOOL CACB::Empty()
 	{
 		return FX_FALSE;
 	}
-	if (read_lock_ != 0 || write_lock_ != 0)
+	// 依次原子地获取两把锁：先抢 read_lock_，再抢 write_lock_。
+	// 若第二把抢夺失败，必须释放第一把以避免死锁，并返回失败。
+	if (read_lock_.exchange(1) != 0)
 	{
 		return FX_FALSE;
 	}
-
-	read_lock_ = 1;
-	write_lock_ = 1;
+	if (write_lock_.exchange(1) != 0)
+	{
+		read_lock_.store(0);
+		return FX_FALSE;
+	}
 
 	read_pos_ = 0;
 	write_pos_ = 1;
 
-	write_lock_ = 0;
-	read_lock_ = 0;
+	write_lock_.store(0);
+	read_lock_.store(0);
 
 	item_num_ = 0;
 

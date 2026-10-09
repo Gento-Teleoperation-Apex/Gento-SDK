@@ -8,6 +8,7 @@
 #include <cstdarg>
 #include <math.h>
 #include <mutex>
+#include <string.h>
 
 #define FX_COMM_MAX_TIMEOUT 2000
 
@@ -575,7 +576,13 @@ int FX_L1_System_Update(char *update_file_path, char *ini_file_path)
     }
     if (update_file_path != NULL)
     {
-        if (FX_L1_System_SendFile(update_file_path, (char *)"/home/FUSION/Tmp/update_package.UPDATE") != 0)
+        const char *remote_update = "/home/FUSION/Tmp/update_package.UPDATE";
+        size_t len = strlen(update_file_path);
+        if (len >= 4 && strcmp(update_file_path + len - 4, ".ota") == 0)
+        {
+            remote_update = "/home/FUSION/Tmp/update_package.ota";
+        }
+        if (FX_L1_System_SendFile(update_file_path, (char *)remote_update) != 0)
         {
             _FX_ERRO("%s: Failed to transfer update file to the controller", __FUNCTION__);
             return FUNC_RET_SEND_FILE_FAILED;
@@ -5844,7 +5851,7 @@ int FX_L1_Config_SetPDCmdCycleTime(int cycle_time)
     else if (cycle_time > 20)
     {
         _FX_WARN("%s: PD command cycle time is bigger than 20(%d)ms, reset value to be 20ms", __FUNCTION__, cycle_time);
-        cycle_time_actual = 1000;
+        cycle_time_actual = 20;
     }
     else
     {
